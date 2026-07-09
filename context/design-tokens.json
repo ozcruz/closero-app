@@ -1,7 +1,7 @@
 {
   "meta": {
     "name": "Closero Design Tokens (Bone)",
-    "version": "2026-07-04",
+    "version": "2026-07-09",
     "source": "Notion: Closero Design System & Screen Notes",
     "note": "Single source of truth. Generate Flutter theme + web CSS :root from this file. Never hand-copy hexes per screen."
   },
@@ -23,7 +23,9 @@
     "accentDim":  {"value": "#A39C8E", "usage": "Favicon fill, selection-state left borders, income-track gradient start"},
     "green":      {"value": "#4A9668", "usage": "Positive deltas only"},
     "warn":       {"value": "#C4A840", "usage": "Coaching warn state"},
-    "red":        {"value": "#C47878", "usage": "Coaching miss, destructive actions"},
+    "red":        {"value": "#C47878", "usage": "Coaching miss, destructive text and left borders"},
+    "destructive": {"value": "#B85F5F", "usage": "Destructive button fill (solid). Never a tinted wash"},
+    "onDestructive": {"value": "#FFFFFF", "usage": "Text on destructive fill only"},
     "flame":      {"value": "#C4915A", "usage": "Streak flame icon only"}
   },
   "typography": {
@@ -54,7 +56,7 @@
     "card": "surface bg, 1px border, 5-6px radius, no shadow/glow",
     "primaryButton": "accent fill, #0E0C0A text, 5px radius, 700 weight",
     "ghostButton": "transparent, border2 border, mid text — never accent",
-    "destructiveButton": "red-tinted bg/border/text",
+    "destructiveButton": "solid destructive fill, onDestructive text, 5px radius — never a red-tinted wash",
     "navActive": "hi2 text + 2px accentDim left border + faint bg tint",
     "chartsThresholds": "hi2 >=75 / mid 60-74 / dim1 <60 — never accent (income track is the sole exception)",
     "toggle": "pure CSS, grayscale only, never accent",

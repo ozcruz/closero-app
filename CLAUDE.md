@@ -6,6 +6,15 @@
 
 Closero: AI sales-training SaaS. Reps practice sales calls against AI personas, get live coaching + post-call scoring. This repo is the Flutter app. **v1 target is WEB** (deployed to Cloudflare Pages at app.closero.app); iOS is second, Android third. Same Firebase + RevenueCat backend as the live site (closero.app). Separate repo from the site; shared backend, never shared code.
 
+The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/UI/Current Work. includes prototypes of the site and app, however closer-site is what is actually deployed live as my official site.
+
+## Design token sync (single source of truth)
+
+- The source of truth for design tokens is the closero-site copy: `/Users/osmansiddiqi/Desktop/Closero/UI/Current Work/closero-site/design-tokens.json`.
+- `context/design-tokens.json` in this repo is a checked-in copy. Never edit it directly. To change a token: edit the site file, then run `bash tool/sync_tokens.sh` here. The script copies the site file in, reruns `dart run tool/gen_tokens.dart`, and runs the token contract tests. If the site repo ever moves, set `CLOSERO_SITE_TOKENS` to the new path.
+- Commit `context/design-tokens.json` and `lib/core/theme/tokens.g.dart` together. CI's `gen_tokens --check` step fails the build if the generated file is stale.
+- Both repos keep real checked-in copies because GitHub Actions and Cloudflare Pages build off this machine. Never symlink the two files.
+
 ## Hard rules (violating any of these is a bug, not a style choice)
 
 ### Tokens and theme

@@ -1,6 +1,6 @@
 {
-    "name": "closeroapp",
-    "short_name": "closeroapp",
+    "name": "closero_app",
+    "short_name": "closero_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
