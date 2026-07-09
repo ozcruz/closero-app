@@ -33,6 +33,13 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Secrets / native config (never commit real values)
+.env
+.env.*
+**/key.properties
+**/google-services.json
+**/GoogleService-Info.plist
+
 # Symbolication related
 app.*.symbols
 
