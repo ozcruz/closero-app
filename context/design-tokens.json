@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "name": "Closero Design Tokens (Bone)",
+    "version": "2026-07-04",
+    "source": "Notion: Closero Design System & Screen Notes",
+    "note": "Single source of truth. Generate Flutter theme + web CSS :root from this file. Never hand-copy hexes per screen."
+  },
+  "color": {
+    "base":       {"value": "#0E0C0A", "usage": "Page background"},
+    "sidebar":    {"value": "#111009", "usage": "Sidebar, topbar"},
+    "surface":    {"value": "#151210", "usage": "Card surfaces"},
+    "surface2":   {"value": "#1A1714", "usage": "Inset surfaces, icon bg"},
+    "border":     {"value": "#221E1A", "usage": "Primary border"},
+    "border2":    {"value": "#2C2824", "usage": "Secondary border"},
+    "dim3":       {"value": "#36322E", "usage": "Faintest text, section labels"},
+    "dim2":       {"value": "#4A4642", "usage": "Inactive nav/icons. NOT body copy (2.09:1)"},
+    "dim1":       {"value": "#524E4A", "usage": "Tertiary chrome only. NOT body copy (2.37:1)"},
+    "body":       {"value": "#9C948A", "usage": "Secondary body copy (~6.5:1). Use for all real sentences"},
+    "mid":        {"value": "#8A8278", "usage": "Legacy secondary text; prefer body for new copy"},
+    "hi2":        {"value": "#C8C2BA", "usage": "Active nav, card titles, default bar/chart fill"},
+    "hi1":        {"value": "#EDE8E3", "usage": "Primary text"},
+    "accent":     {"value": "#E8E1D3", "usage": "Warm bone. ONLY: primary CTA fill, mic-on control, pricing recommended tier, app icon, income-track gradient end"},
+    "accentDim":  {"value": "#A39C8E", "usage": "Favicon fill, selection-state left borders, income-track gradient start"},
+    "green":      {"value": "#4A9668", "usage": "Positive deltas only"},
+    "warn":       {"value": "#C4A840", "usage": "Coaching warn state"},
+    "red":        {"value": "#C47878", "usage": "Coaching miss, destructive actions"},
+    "flame":      {"value": "#C4915A", "usage": "Streak flame icon only"}
+  },
+  "typography": {
+    "families": {
+      "body":    {"value": "Figtree", "weights": [400,500,600,700], "file": "assets/fonts/figtree-var.woff2", "axes": {"wght": [300,900]}},
+      "display": {"value": "Bricolage Grotesque", "weights": [600,700,800], "file": "assets/fonts/bricolage-var.woff2", "axes": {"opsz": [12,96], "wght": [200,800]}}
+    },
+    "rule": "18px+ AND bold -> Bricolage; everything else -> Figtree. Sentence case except short inline badges.",
+    "letterSpacing": {"titles": "-0.02em", "buttons": "-0.01em", "uppercaseLabels": "0.05em-0.1em"},
+    "minBodySize": "12px; decorative micro-labels >= 10px"
+  },
+  "spacing": {
+    "unit": 4,
+    "scale": {"sp1":4,"sp2":8,"sp3":12,"sp4":16,"sp5":20,"sp6":24,"sp8":32,"sp10":40,"sp12":48,"sp16":64,"sp20":80,"sp24":96},
+    "rules": {"headlineToSubtext": "sp3 (12px), always", "sectionToNext": "sp6 (24px), always"}
+  },
+  "layout": {
+    "siteContainer": {"maxWidth": 1400, "padding": "clamp(24px, 4vw, 64px)"},
+    "sidebar": 216,
+    "coachingPanel": {"width": 300, "collapseBelow": 1100},
+    "heroColumn": {"maxWidth": 640, "align": "left"}
+  },
+  "radius": {
+    "card": "5-6px", "button": "5px",
+    "full": "circles + progress end-caps only (functional)"
+  },
+  "components": {
+    "card": "surface bg, 1px border, 5-6px radius, no shadow/glow",
+    "primaryButton": "accent fill, #0E0C0A text, 5px radius, 700 weight",
+    "ghostButton": "transparent, border2 border, mid text — never accent",
+    "destructiveButton": "red-tinted bg/border/text",
+    "navActive": "hi2 text + 2px accentDim left border + faint bg tint",
+    "chartsThresholds": "hi2 >=75 / mid 60-74 / dim1 <60 — never accent (income track is the sole exception)",
+    "toggle": "pure CSS, grayscale only, never accent",
+    "hintCard": "surface bg, 3px colored left border (green/warn/red)",
+    "grain": "2.5% opacity noise on every base surface"
+  },
+  "iconography": {
+    "signature": "-60deg: exactly one -60° element per icon (gap or shear), 15x15 viewBox, 1.2-1.5 stroke, round caps, grayscale dim2->hi2 (flame excepted)",
+    "closedCircleBelow": "r ~2.5 (gap reads as error at that size)",
+    "ringsExempt": "score/progress rings stay complete (functional)"
+  },
+  "motion": {
+    "buttonsAndNav": "eased transitions + hover lift (translateY + shadow)",
+    "scrollReveal": "marketing pages only",
+    "reducedMotion": "all animation disabled under prefers-reduced-motion"
+  }
+}
