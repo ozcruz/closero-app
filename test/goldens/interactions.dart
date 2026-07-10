@@ -16,6 +16,13 @@ Interaction hover(Finder finder) => (WidgetTester tester) async {
       return gesture.removePointer;
     };
 
+/// Disables animations for the subtree so widgets with repeating
+/// animations (e.g. the MomentumDots pulse) settle deterministically.
+Widget noMotion({required Widget child}) => MediaQuery(
+      data: const MediaQueryData(disableAnimations: true),
+      child: child,
+    );
+
 /// Places a scenario on the app's base background with breathing room,
 /// matching how components sit on real screens.
 Widget onBase({required Widget child}) => ColoredBox(

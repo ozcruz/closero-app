@@ -37,6 +37,10 @@ void main() {
       'destructive': c.destructive,
       'onDestructive': c.onDestructive,
       'flame': c.flame,
+      'artViolet': c.artViolet,
+      'artUmber': c.artUmber,
+      'artMoss': c.artMoss,
+      'artSlate': c.artSlate,
     };
 
     test('covers every token in design-tokens.json, by name and value', () {

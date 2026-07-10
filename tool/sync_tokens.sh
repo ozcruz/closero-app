@@ -8,7 +8,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-SITE_TOKENS="${CLOSERO_SITE_TOKENS:-$HOME/Desktop/Closero/UI/Current Work/closero-site/design-tokens.json}"
+SITE_TOKENS="${CLOSERO_SITE_TOKENS:-$HOME/Desktop/Closero/All Work July 2026/Current Work/closero-site/design-tokens.json}"
 APP_TOKENS="context/design-tokens.json"
 
 if [ ! -f "$SITE_TOKENS" ]; then

@@ -6,11 +6,11 @@
 
 Closero: AI sales-training SaaS. Reps practice sales calls against AI personas, get live coaching + post-call scoring. This repo is the Flutter app. **v1 target is WEB** (deployed to Cloudflare Pages at app.closero.app); iOS is second, Android third. Same Firebase + RevenueCat backend as the live site (closero.app). Separate repo from the site; shared backend, never shared code.
 
-The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/UI/Current Work. includes prototypes of the site and app, however closer-site is what is actually deployed live as my official site.
+The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/All Work July 2026/Current Work. includes prototypes of the site and app, however closero-site is what is actually deployed live as my official site.
 
 ## Design token sync (single source of truth)
 
-- The source of truth for design tokens is the closero-site copy: `/Users/osmansiddiqi/Desktop/Closero/UI/Current Work/closero-site/design-tokens.json`.
+- The source of truth for design tokens is the closero-site copy: `/Users/osmansiddiqi/Desktop/Closero/All Work July 2026/Current Work/closero-site/design-tokens.json`.
 - `context/design-tokens.json` in this repo is a checked-in copy. Never edit it directly. To change a token: edit the site file, then run `bash tool/sync_tokens.sh` here. The script copies the site file in, reruns `dart run tool/gen_tokens.dart`, and runs the token contract tests. If the site repo ever moves, set `CLOSERO_SITE_TOKENS` to the new path.
 - Commit `context/design-tokens.json` and `lib/core/theme/tokens.g.dart` together. CI's `gen_tokens --check` step fails the build if the generated file is stale.
 - Both repos keep real checked-in copies because GitHub Actions and Cloudflare Pages build off this machine. Never symlink the two files.
@@ -27,7 +27,10 @@ The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/UI/Current Wor
 
 ### Accent discipline
 - ONE accent-filled element per view, maximum. Permitted uses ONLY: primary CTA fill, live-call mic-on control, pricing recommended-tier highlight, app icon, income-track gradient (accentDim→accent).
-- Score/progress rings are NEVER accent, anywhere. Rings color by threshold: hi2 ≥75, mid 60-74, dim1 <60.
+- Score/progress rings are NEVER accent, anywhere. Rings and bars color by threshold: hi2 ≥75, mid 60-74, dim1 <60. Score TEXT on cards/lists uses the scoreText ramp instead: green ≥75, hi2 60-74, mid <60 (helpers: `scoreThresholdColor` / `scoreTextColor` in score_ring.dart; never inline the thresholds).
+- Green is for: positive deltas, coaching good state, momentum dots, live/complete status, and personal-best score text at 75+. Nothing else.
+- Small-caps section labels are dim2 (SectionHeader label variant), not dim3/dim1.
+- Persona avatar art: vertical gradient from an artX token (artViolet/artUmber/artMoss/artSlate, or surface2 for neutral) to base, faint dim3 initials on top. Tints are decorative only, chosen per persona, never semantic.
 - No tinted-chip containers: never fill a badge/pill/tag/callout with a semantic color-wash + matching translucent border. Neutral surface + neutral border; state is a solid dot, solid icon badge, colored text, or a 3px colored left edge.
 - Destructive buttons: solid #B85F5F fill (the `destructive` role), white text. Never a red-tinted wash.
 - Ghost buttons: transparent, border2 border, mid text. Never accent.
