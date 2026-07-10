@@ -21,6 +21,7 @@ class PrimaryButton extends StatelessWidget {
     this.icon,
     this.loading = false,
     this.size = ClosButtonSize.large,
+    this.expand = false,
   });
 
   final String label;
@@ -33,6 +34,9 @@ class PrimaryButton extends StatelessWidget {
   final bool loading;
   final ClosButtonSize size;
 
+  /// Fills the available width with a centered label (form CTAs).
+  final bool expand;
+
   @override
   Widget build(BuildContext context) {
     return _ClosButtonBase(
@@ -41,6 +45,7 @@ class PrimaryButton extends StatelessWidget {
       icon: icon,
       loading: loading,
       size: size,
+      expand: expand,
       resolve: (colors, {required hovered, required pressed}) => _ButtonVisual(
         fill: pressed
             ? Color.lerp(colors.accent, colors.base, 0.08)!
@@ -68,6 +73,7 @@ class GhostButton extends StatelessWidget {
     this.icon,
     this.loading = false,
     this.size = ClosButtonSize.large,
+    this.expand = false,
   });
 
   final String label;
@@ -75,6 +81,9 @@ class GhostButton extends StatelessWidget {
   final Widget? icon;
   final bool loading;
   final ClosButtonSize size;
+
+  /// Fills the available width with a centered label.
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +95,7 @@ class GhostButton extends StatelessWidget {
       icon: icon,
       loading: loading,
       size: size,
+      expand: expand,
       resolve: (colors, {required hovered, required pressed}) {
         final raised = hovered || pressed;
         return _ButtonVisual(
@@ -108,6 +118,7 @@ class DestructiveButton extends StatelessWidget {
     this.icon,
     this.loading = false,
     this.size = ClosButtonSize.large,
+    this.expand = false,
   });
 
   final String label;
@@ -115,6 +126,9 @@ class DestructiveButton extends StatelessWidget {
   final Widget? icon;
   final bool loading;
   final ClosButtonSize size;
+
+  /// Fills the available width with a centered label.
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +138,7 @@ class DestructiveButton extends StatelessWidget {
       icon: icon,
       loading: loading,
       size: size,
+      expand: expand,
       resolve: (colors, {required hovered, required pressed}) => _ButtonVisual(
         fill: pressed
             ? Color.lerp(colors.destructive, colors.base, 0.08)!
@@ -138,6 +153,48 @@ class DestructiveButton extends StatelessWidget {
               )
             : null,
       ),
+    );
+  }
+}
+
+/// SSO / connected-account action: surface2 fill, border2 border, hi2
+/// text. Text only, no provider logo marks (protected brands).
+class SsoButton extends StatelessWidget {
+  const SsoButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.loading = false,
+    this.size = ClosButtonSize.medium,
+    this.expand = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+  final ClosButtonSize size;
+
+  /// Fills the available width with a centered label.
+  final bool expand;
+
+  @override
+  Widget build(BuildContext context) {
+    return _ClosButtonBase(
+      label: label,
+      onPressed: onPressed,
+      icon: null,
+      loading: loading,
+      size: size,
+      expand: expand,
+      resolve: (colors, {required hovered, required pressed}) {
+        final raised = hovered || pressed;
+        return _ButtonVisual(
+          fill: raised ? colors.surface : colors.surface2,
+          border: BorderSide(color: raised ? colors.dim1 : colors.border2),
+          content: colors.hi2,
+          weight: FontWeight.w600,
+        );
+      },
     );
   }
 }
@@ -177,6 +234,7 @@ class _ClosButtonBase extends StatefulWidget {
     required this.loading,
     required this.size,
     required this.resolve,
+    this.expand = false,
   });
 
   final String label;
@@ -185,6 +243,7 @@ class _ClosButtonBase extends StatefulWidget {
   final bool loading;
   final ClosButtonSize size;
   final _VisualResolver resolve;
+  final bool expand;
 
   @override
   State<_ClosButtonBase> createState() => _ClosButtonBaseState();
@@ -217,7 +276,8 @@ class _ClosButtonBaseState extends State<_ClosButtonBase> {
         : const Duration(milliseconds: 200);
 
     Widget content = Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (widget.icon != null) ...[
           IconTheme.merge(

@@ -190,4 +190,85 @@ void main() {
       ],
     ),
   );
+
+  goldenTest(
+    'SsoButton states',
+    fileName: 'sso_button',
+    pumpBeforeTest: pumpNTimes(2, const Duration(milliseconds: 300)),
+    builder: () => GoldenTestGroup(
+      children: [
+        GoldenTestScenario(
+          name: 'default',
+          child: onBase(
+            child: SsoButton(label: 'Continue with Google', onPressed: () {}),
+          ),
+        ),
+        GoldenTestScenario(
+          name: 'expanded',
+          child: onBase(
+            child: SizedBox(
+              width: 336,
+              child: SsoButton(
+                label: 'Continue with Google',
+                expand: true,
+                onPressed: () {},
+              ),
+            ),
+          ),
+        ),
+        GoldenTestScenario(
+          name: 'disabled',
+          child: onBase(child: const SsoButton(label: 'Continue with Google')),
+        ),
+        GoldenTestScenario(
+          name: 'loading',
+          child: onBase(
+            child: SsoButton(
+              label: 'Continue with Google',
+              loading: true,
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  goldenTest(
+    'SsoButton hover',
+    fileName: 'sso_button_hover',
+    whilePerforming: hover(find.byType(SsoButton)),
+    builder: () => GoldenTestGroup(
+      children: [
+        GoldenTestScenario(
+          name: 'hover',
+          child: onBase(
+            child: SsoButton(label: 'Continue with Google', onPressed: () {}),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  goldenTest(
+    'PrimaryButton expanded',
+    fileName: 'primary_button_expanded',
+    builder: () => GoldenTestGroup(
+      children: [
+        GoldenTestScenario(
+          name: 'fills a form column, label centered',
+          child: onBase(
+            child: SizedBox(
+              width: 336,
+              child: PrimaryButton(
+                label: 'Continue',
+                expand: true,
+                onPressed: () {},
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

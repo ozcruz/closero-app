@@ -1,12 +1,12 @@
 {
-    "name": "closero_app",
-    "short_name": "closero_app",
+    "name": "Closero",
+    "short_name": "Closero",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#0E0C0A",
+    "theme_color": "#0E0C0A",
+    "description": "Where reps become closers. Practice the call before it costs you the deal.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

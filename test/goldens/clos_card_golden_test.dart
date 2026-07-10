@@ -52,6 +52,18 @@ void main() {
           ),
         ),
         GoldenTestScenario(
+          name: 'hairline (auth card treatment)',
+          child: onBase(
+            child: SizedBox(
+              width: 320,
+              child: ClosCard(
+                hairline: true,
+                child: sampleContent('Welcome back'),
+              ),
+            ),
+          ),
+        ),
+        GoldenTestScenario(
           name: 'inset nested in default',
           child: onBase(
             child: SizedBox(
