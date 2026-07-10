@@ -9,6 +9,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
+import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../widgets/widgets.dart';
 import 'app_routes.dart';
@@ -129,7 +130,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: DashboardRoute.path,
-            builder: (context, state) => shellStub('Dashboard'),
+            builder: (context, state) => const DashboardScreen(),
           ),
           GoRoute(
             path: SimulationsRoute.path,

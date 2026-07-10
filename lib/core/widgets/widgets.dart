@@ -2,6 +2,7 @@
 library;
 
 export 'avatar_stack.dart';
+export 'clos_badge.dart';
 export 'clos_buttons.dart';
 export 'clos_card.dart';
 export 'clos_icons.dart';
