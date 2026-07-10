@@ -1,3 +1,6 @@
+@Tags(['golden'])
+library;
+
 import 'package:alchemist/alchemist.dart';
 import 'package:closero_app/core/widgets/widgets.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +12,7 @@ import 'interactions.dart';
 /// session; the nav tints whatever icon widget it is given.
 SideNav buildNav({required bool collapsed}) => SideNav(
       collapsed: collapsed,
-      user: SideNavUser(name: 'Osman Cruz', plan: 'Closer', onTap: () {}),
+      user: SideNavUser(name: 'Sandra Voss', plan: 'Closer', onTap: () {}),
       groups: [
         SideNavGroup(
           label: 'Training',

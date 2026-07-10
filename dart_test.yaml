@@ -1,0 +1,3 @@
+tags:
+  golden:
+    description: Alchemist golden/screenshot tests. Excluded from the required push/PR CI job (platform-dependent rendering); run manually via the "Golden tests" workflow or `flutter test --tags golden` locally.

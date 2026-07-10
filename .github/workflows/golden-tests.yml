@@ -1,0 +1,38 @@
+name: Golden tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      update:
+        description: "Regenerate goldens instead of just comparing (uploads updated PNGs as an artifact for you to download and commit)"
+        type: boolean
+        default: false
+
+jobs:
+  goldens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Golden tests
+        if: ${{ inputs.update != true }}
+        run: flutter test --tags golden
+
+      - name: Update goldens
+        if: ${{ inputs.update == true }}
+        run: flutter test --tags golden --update-goldens
+
+      - name: Upload updated goldens
+        if: ${{ inputs.update == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: updated-goldens
+          path: test/goldens/goldens/ci/

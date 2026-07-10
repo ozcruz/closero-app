@@ -78,7 +78,7 @@ Sandra Voss · 9-day streak · $64K current, $40K-$150K range, $85-95K next tier
 ## Verification (run before declaring any task done)
 
 1. `flutter analyze` clean.
-2. `flutter test` including goldens; new/changed widgets get goldens per state, compared against `context/prototype-screens/` crops.
+2. `flutter test` including goldens (locally goldens run by default; CI push/PR runs `flutter test --exclude-tags golden` since golden pixel comparison is platform-sensitive and only reliable on the OS that generated the reference images). New/changed widgets get goldens per state, compared against `context/prototype-screens/` crops. Run goldens manually via the "Golden tests" GitHub Actions workflow (`workflow_dispatch`, with an `update` option to regenerate the CI-variant PNGs on Linux) whenever you want to check them against the actual CI environment.
 3. `dart run tool/gen_tokens.dart --check` (token hash matches; regen was not skipped).
 4. Greps: no `Color(0x` outside tokens.g.dart; no `—` in lib/; no "founding"; no retired gold hexes (E8D5A3, A89060, and rgba forms 232,213,163 / 168,144,96).
 5. Accent audit on any touched screen: count accent-filled elements, must be ≤1 and on the permitted list.
@@ -87,3 +87,5 @@ Sandra Voss · 9-day streak · $64K current, $40K-$150K range, $85-95K next tier
 ## Session protocol
 
 One feature per session. Read `context/` before writing code. State which prototype screen(s) you are matching. Do not start the next feature in the same session. If a spec question is not answered by this file or `context/`, ask; do not invent.
+
+When necessary, always use Context7 when I need library/API documentation, code generation, setup, or configuration steps without me having to explicitly ask.

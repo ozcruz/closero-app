@@ -25,8 +25,8 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Test (including goldens)
-        run: flutter test
+      - name: Test (excluding goldens)
+        run: flutter test --exclude-tags golden
 
       - name: Grep guards (colors, em dashes, copy, retired hexes)
         run: bash tool/ci_greps.sh
