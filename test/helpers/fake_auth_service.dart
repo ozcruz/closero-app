@@ -12,6 +12,7 @@ class FakeAuthService implements AuthService {
   final List<String> calls = [];
   String? lastEmail;
   String? lastPassword;
+  String? lastDisplayName;
   bool verified = false;
 
   void _record(String call) {
@@ -73,4 +74,10 @@ class FakeAuthService implements AuthService {
 
   @override
   Future<void> ensureUserDoc(User? user) async => _record('ensureUserDoc');
+
+  @override
+  Future<void> updateDisplayName(String displayName) async {
+    lastDisplayName = displayName;
+    _record('updateDisplayName');
+  }
 }

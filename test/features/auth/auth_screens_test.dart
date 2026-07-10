@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/fake_auth_service.dart';
 
@@ -36,6 +37,7 @@ Future<void> pumpAuthScreen(
         '/signup',
         '/reset-password',
         '/verify-email',
+        '/onboarding',
       ])
         GoRoute(
           path: path,
@@ -240,7 +242,9 @@ void main() {
       );
     });
 
-    testWidgets('polls and moves on once verified', (tester) async {
+    testWidgets('polls and moves a first-time user into onboarding',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
       final auth = FakeAuthService()..verified = true;
       await pumpAuthScreen(tester, const VerifyEmailScreen(), auth);
 
@@ -248,6 +252,18 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(auth.calls, contains('reloadAndCheckVerified'));
+      expect(find.text('stub:/onboarding'), findsOneWidget);
+    });
+
+    testWidgets('polls and moves an onboarded user to the dashboard',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({'onboarding.complete': true});
+      final auth = FakeAuthService()..verified = true;
+      await pumpAuthScreen(tester, const VerifyEmailScreen(), auth);
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
       expect(find.text('stub:/'), findsOneWidget);
     });
   });

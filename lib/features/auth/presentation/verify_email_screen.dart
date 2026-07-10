@@ -8,6 +8,7 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../onboarding/data/onboarding_store.dart';
 import '../application/auth_providers.dart';
 import 'widgets/auth_widgets.dart';
 
@@ -58,7 +59,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen>
 
   Future<void> _checkVerified() async {
     final verified = await _auth.reloadAndCheckVerified();
-    if (verified && mounted) {
+    if (!verified || !mounted) return;
+    // First verification lands in onboarding; a deep link (?from) or a
+    // returning user goes straight through.
+    final onboarded = await ref.read(onboardingStoreProvider).isComplete();
+    if (!mounted) return;
+    if (widget.from == null && !onboarded) {
+      const OnboardingRoute().go(context);
+    } else {
       context.go(widget.from ?? DashboardRoute.path);
     }
   }

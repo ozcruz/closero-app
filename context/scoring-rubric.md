@@ -17,25 +17,34 @@ This file defines what a session score IS: the categories, weights, hint taxonom
 
 ## Score categories (the Skill Breakdown)
 
-Five categories, each 0-100, composite is the weighted total. Confirm the display names against the Dashboard prototype crop before Session 10 locks copy; the KEYS below are the schema and do not change even if display names do.
+Five categories, each 0-100, composite is the weighted total. Display names locked 2026-07-10 to match the prototype's Skill Breakdown. The KEYS are the schema and never change even if display copy is tweaked.
 
-| Key | Display name (proposed) | Weight | Observable signals the scoring LLM uses |
+| Key | Display name (LOCKED) | Weight | Observable signals the scoring LLM uses |
 |---|---|---|---|
-| `discovery` | Discovery | 25% | Open questions asked, follow-ups on pain points, listening before pitching, need summarized back |
 | `objections` | Objection handling | 25% | Objections acknowledged vs dodged, reframe quality, staying calm on pushback, not caving on price instantly |
-| `clarity` | Clarity & pacing | 15% | Filler words per minute, run-on rambling, pace changes, concrete language vs jargon |
-| `listening` | Talk balance | 15% | Talk ratio (target ~40-45% rep), interruptions, dead-air recovery, building on what the persona said |
-| `closing` | Next steps | 20% | Asked for something concrete, trial close attempts, summarized agreement, specific follow-up locked |
+| `discovery` | Discovery questions | 25% | Open questions asked, follow-ups on pain points, listening before pitching, need summarized back |
+| `closing` | Closing technique | 20% | Asked for something concrete, trial close attempts, summarized agreement, specific follow-up locked |
+| `rapport` | Building rapport | 15% | Talk ratio (target ~40-45% rep), building on what the persona said, acknowledgment before redirecting, mirroring their language, interruptions (negative) |
+| `tonality` | Tonality and pacing | 15% | Filler words per minute, words per minute and pace shifts, monologue length, pause discipline, concrete language vs jargon |
 
-- Composite: `total = 0.25*discovery + 0.25*objections + 0.15*clarity + 0.15*listening + 0.20*closing`, rounded to an integer.
+- Composite: `total = 0.25*objections + 0.25*discovery + 0.20*closing + 0.15*rapport + 0.15*tonality`, rounded to an integer.
+- Honesty note on `tonality`: v1 judges it from transcript-derivable signals (pace, fillers, pauses, word choice). True acoustic tone (pitch, energy) needs audio-feature extraction in the broker; that is a v1.1 upgrade, and copy must not claim we hear tone until it exists.
+
+## Extended signal set (background depth, simple UI)
+
+The UI shows 5 numbers; the background records much more, per session, so scoring gets more accurate over time and the income mapping can be tuned on real evidence without a schema change:
+
+- Each category gets sub-signals stored in `score.signals.{categoryKey}` as 0-100 subscores. Launch set: objections → {acknowledged, reframed, heldGround}; discovery → {openQuestionRate, followUpDepth, needSummarized}; closing → {askedForCommitment, trialCloses, nextStepLocked}; rapport → {talkRatioScore, buildingOnAnswers, interruptions}; tonality → {fillerScore, paceScore, monologueScore}.
+- Sub-signals are LLM-graded but anchored to the deterministic `stats` block wherever a hard number exists (e.g. `talkRatioScore` is computed, not judged).
+- Nothing in the UI depends on sub-signals in v1, so they can be refined freely. Later they power deeper coaching ("your discovery is strong but follow-up depth is the gap") and a smarter earning-potential model.
 - Thresholds everywhere in the UI: 75+ strong (hi2 ring), 60-74 developing (mid), <60 focus area (dim1). Same bands for category scores and the composite.
 - Methodology scenarios (Closer tier) may override weights and add methodology-specific signals (e.g. SPIN: weight discovery 35%, check for Situation/Problem/Implication/Need-payoff sequencing). Overrides live in the scenario definition, not in code: each scenario document carries an optional `rubricOverride` block with the same shape.
 
 ## Overall score + earning potential (the trajectory layer)
 
 - **Overall score** = `rolling10` composite (mean of the last 10 completed sessions; all of them if <10). This is the number on the Dashboard, and the input to the income mapping. A single session never moves earning potential directly.
-- **Consistency modifier.** A skill tier requires proof, not a spike. `tierScore = rolling10`, but a tier is only CONFIRMED when both hold: at least 5 completed sessions inside the band, and standard deviation of the last 10 composites ≤ 12. Until confirmed, the UI shows the tier as "in reach" rather than reached. This is the honest version of "consistency counts", and it is also the motivation loop: the path to the next income band is always "N more sessions at this level", which is a practice prompt, not a grade.
-- **Income mapping** (copy rules from CLAUDE.md apply: market bands at a skill tier, "per published comp data", never a personal prediction): rolling10 <60 → entry band, 60-74 → mid band ($64K canonical), 75+ confirmed → next tier band ($85-95K canonical). The app NEVER says "you will earn X"; it says "reps who sell at this level typically earn X-Y, per published comp data".
+- **Consistency rule (plain version).** A skill tier requires proof, not one hot call. A tier is CONFIRMED when at least 5 of the user's last 7 completed sessions score inside that tier's band. Until then the UI shows the tier as "in reach", with copy like "2 more calls at this level and this is your tier". That line is the motivation loop: the path to the next income band is always a concrete number of good sessions, which is a practice prompt, not a grade.
+- **Income mapping** (copy rules from CLAUDE.md apply: market bands at a skill tier, "per published comp data", never a personal prediction): rolling10 <60 → entry band, 60-74 → mid band ($64K canonical), 75+ confirmed per the consistency rule → next tier band ($85-95K canonical). The app NEVER says "you will earn X"; it says "reps who sell at this level typically earn X-Y, per published comp data".
 - **Freshness decay (proposed, confirm):** if no completed session in 21 days, the tier shows as "needs a warm-up" (copy, not a score penalty). Skills fade; punishing the number feels unfair, nudging a session does not.
 - Skill Breakdown on the Dashboard = category `rolling10` values, weakest first, each with its own threshold color. The weakest category is the "fastest path up" input for Achievements.
 
@@ -72,14 +81,25 @@ sessions/{id}:
 
 `users/{uid}/aggregates/current` (one doc, server-written):
 
-- `sessionCount`, `lastSessionAt`, `streakDays` (calendar days with ≥1 completed session, local to the user's tz offset captured at session start; aborted sessions never count).
-- Per category and total: `rolling10`, `stdDev10`, `best` (personal best composite, and per scenario for the Library "personal best" chip), `tierConfirmed: bool` per the consistency rule above.
+- `sessionCount`, `lastSessionAt`, `streakDays` (calendar days with ≥1 streak-qualifying session, local to the user's tz offset captured at session start; aborted-for-technical-failure sessions never count).
+- Per category and total: `rolling10`, `best` (personal best composite, and per scenario for the Library "personal best" chip), `tierConfirmed: bool` per the consistency rule above.
 - Delta rule (already a CLAUDE.md rule, restated): sessions 1-9 compare vs the previous session (`basis: last_session`); sessions 10+ compare vs the rolling 10-session average excluding the current session (`basis: rolling_10`). The delta is computed and stored at write time so history never re-renders differently later.
 - Progress screen 7D/30D/90D/All: query completed sessions by `endedAt` range and recompute section values from that result set; the aggregate doc is only the Dashboard fast path.
 
-## Open questions for Osman before this is wired into the prompt pack
+## Streaks (engagement metric, firewalled from skill)
 
-1. Do the five category names match the prototype's Skill Breakdown labels? If the prototype shows different skills, the display names change and the keys stay.
-2. Happy with 40-45% as the target rep talk ratio? (Common coaching guidance for discovery-heavy calls; cold-call opens can run higher.)
-3. Confirm the consistency rule (5 sessions in band + stdDev ≤ 12 to confirm a tier) and the 21-day freshness nudge.
-4. Streak definition uses completed sessions only. Confirm.
+Streaks measure showing up; skill scores measure selling. The two never mix: a streak must not inflate any category score or the income tier, or the earning-potential claim stops being defensible ("practiced daily" is not "sells at the $85-95K level"). Streaks reward the user through access and recognition instead:
+
+- **What counts (the commit point):** a session counts toward the streak once it reaches the commit point, defined at launch as 3+ minutes of real conversation OR the first `good` hint on an objection exchange, whichever comes first. A full completed session is NOT required; requiring it makes streaks feel like homework. After launch, replace the 3-minute guess with the measured point of lowest mid-session exit (PostHog: sim_start vs sim_completed durations) and record the change here.
+- Scores still require a completed session. Commit point = streak credit only.
+- **Streak benefits (mechanically true, no score inflation):** 7-day streak = +1 bonus free session that month (free tier; costs us ~$0.25, buys a habit); 30-day streak = a Library scenario unlock. Both are server-granted through the same entitlement/cap machinery, never client-side.
+- Freshness nudge stays copy-only ("needs a warm-up"), never a score penalty.
+
+## Decisions log
+
+- 2026-07-10: category names locked to the prototype's five (objections, discovery, closing, rapport, tonality); talk-ratio target 40-45% accepted; consistency rule reworded to "5 of last 7 in band"; streak commit-point model adopted with launch default of 3 min or first objection `good`, to be recalibrated from funnel data.
+
+## Remaining open items
+
+1. Confirm the streak benefits are wanted at launch (+1 session at 7 days, scenario unlock at 30) or v1.1.
+2. Tonality acoustic analysis (pitch/energy) is v1.1; transcript-derived signals only in v1.

@@ -50,6 +50,7 @@ The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/All Work July 
 - NO live score mid-call. Momentum dots only: 5-dot footer, solid green fills for strong moves, latest dot pulses, caption in mid. A dot animates in per logged 'good' coaching hint.
 - Coaching hints must be observable from audio/transcript only (voice, pacing, filler words, talk ratio). No body-language/CV claims.
 - Post-call delta: sessions 1-9 compare "vs last session"; 10+ use the 10-session rolling average.
+- Scoring contract (`context/scoring-rubric.md`) is binding: five locked category keys (objections, discovery, closing, rapport, tonality), hard stats computed server-side and never invented by the LLM, income tiers confirmed by the 5-of-last-7 consistency rule. Streaks NEVER influence a skill score or the income tier; streak rewards are access-based (bonus session, unlock) and server-granted.
 - Cold Call: no sidebar, audio-only avatar, Coaching tab is the default (not Transcript), accent = mic-on only.
 - Video Sim: same coaching panel, full-screen stage, frosted topbar, blurred office bg, accent = none.
 

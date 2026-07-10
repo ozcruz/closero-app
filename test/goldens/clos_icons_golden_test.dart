@@ -71,4 +71,21 @@ void main() {
       ],
     ),
   );
+
+  goldenTest(
+    'Closero wordmark',
+    fileName: 'closero_wordmark',
+    builder: () => GoldenTestGroup(
+      children: [
+        GoldenTestScenario(
+          name: 'topbar 60px',
+          child: onBase(child: const CloseroWordmark(width: 60)),
+        ),
+        GoldenTestScenario(
+          name: 'hero 400px',
+          child: onBase(child: const CloseroWordmark(width: 400)),
+        ),
+      ],
+    ),
+  );
 }

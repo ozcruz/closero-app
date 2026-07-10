@@ -9,6 +9,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
+import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../widgets/widgets.dart';
 import 'app_routes.dart';
 import 'app_shell.dart';
@@ -81,7 +82,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Standalone signed-in screens (no sidebar).
       GoRoute(
         path: OnboardingRoute.path,
-        builder: (context, state) => standaloneStub('Onboarding'),
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: ColdCallSimRoute.path,

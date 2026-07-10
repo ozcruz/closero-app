@@ -9,6 +9,7 @@ export 'clos_modal.dart';
 export 'clos_scaffold.dart';
 export 'clos_text_field.dart';
 export 'clos_toggle.dart';
+export 'closero_wordmark.dart';
 export 'delta_pill.dart';
 export 'empty_state.dart';
 export 'grain_overlay.dart';

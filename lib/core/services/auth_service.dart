@@ -91,6 +91,19 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  /// Sets the display name on the auth profile and users/{uid}
+  /// (onboarding step 2, settings profile). displayName is
+  /// client-owned; server-owned fields are never touched here.
+  Future<void> updateDisplayName(String displayName) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await user.updateDisplayName(displayName);
+    await _firestore.collection('users').doc(user.uid).update({
+      'displayName': displayName,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   /// Creates users/{uid} on first sign-in if it doesn't exist yet.
   /// Idempotent and non-throwing so it never blocks the auth flow;
   /// mirrors the site's ensureUserDoc.
