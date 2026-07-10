@@ -56,10 +56,16 @@ The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/UI/Current Wor
 - Every sim start goes through the `startSimSession` callable, from day one, even while it only increments. The client never decides the cap.
 - Session scores are server-written. The client displays; it never computes-and-saves a score.
 - Billing on web: RevenueCat Web Purchase Links (URL carries app_user_id = Firebase uid) + Firestore entitlement watch. purchases_flutter arrives only with the iOS target, behind the existing BillingService interface.
+- Analytics: every product event goes through the single `AnalyticsService`; event names are consts in one file (`lib/core/services/analytics_events.dart`), never inline strings. Identify by Firebase uid only; no email, displayName, or transcript content in any event payload. `purchase_succeeded` fires from the entitlement flip in Firestore, never from the checkout click.
+- Failed/aborted sim sessions (socket drop, mic failure) never count against the free cap and never produce a score. Honest copy, no fake partial score.
 
 ### Components and screens
 - Screens assemble `lib/core/widgets/` components; do not fork one-off variants. If a screen needs a new state, add it to the component with a golden test.
 - Rive avatars sit on a permanent gradient placeholder Stack. The placeholder is the loading state AND the fallback; it is never removed.
+- Rive rig contract (`context/rive-contract.md`) is binding. State machine name is LOCKED: `LipSync`. Input names are LOCKED and case-sensitive: `viseme` (Number, 8 mouth groups), `Blink` / `HalfBlink` / `Breath` (Triggers, independent of mouth state), plus the production idle inputs once locked there. Any replacement .riv must conform; app code never renames inputs to fit an asset.
+- Rive assets load via `StateMachineController` + SMI input handles. Never the plain `RiveAnimation.asset` widget (no input handles). Missing state machine or input = fall back to the placeholder, never crash.
+- The Azure-viseme-ID to mouth-group mapping lives ONLY in `lib/core/services/viseme_mapping.dart`. No inline viseme maps anywhere else.
+- Viseme input updates are scheduled against audio playback position (just_audio position stream, per utterance), NEVER against event-arrival time. Blink/breath/idle run on their own timers, decoupled from the viseme stream.
 - Library: free tier = B2C library, Closer = B2B + Methodologies. Locked cards route to the upgrade screen. Methodology tags appear ONLY in the Scenario Preview Modal, never on cards. Completion = personal-best score or "Start", never a checkmark.
 - Accessibility is not optional: Semantics on every icon-only control, 44px minimum tap targets (enforced in the primitives), body copy contrast per token rules.
 - Icon signature: every custom icon has exactly ONE -60° element (gap or shear), 15x15 viewBox, 1.2-1.5 stroke, round caps, grayscale dim2→hi2 (streak flame excepted). Circles under r≈2.5 stay closed. Rings exempt (functional).

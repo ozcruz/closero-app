@@ -269,6 +269,33 @@ class ClosRadius extends ThemeExtension<ClosRadius> {
   ClosRadius lerp(ClosRadius? other, double t) => this;
 }
 
+/// Layout tokens: fixed chrome widths and breakpoints.
+class ClosLayout extends ThemeExtension<ClosLayout> {
+  const ClosLayout();
+
+  /// Expanded sidebar width.
+  final double sidebar = 216;
+
+  /// Live-sim coaching panel width.
+  final double coachingPanel = 300;
+
+  /// Below this viewport width, collapsible chrome
+  /// (coaching panel, sidebar) collapses.
+  final double collapseBelow = 1100;
+
+  /// Max content container width.
+  final double siteContainerMaxWidth = 1400;
+
+  /// Max hero column width.
+  final double heroColumnMaxWidth = 640;
+
+  @override
+  ClosLayout copyWith() => const ClosLayout();
+
+  @override
+  ClosLayout lerp(ClosLayout? other, double t) => this;
+}
+
 /// Type tokens. The scale below is generated THROUGH the family
 /// rule (18px+ AND bold w600+ -> Bricolage Grotesque, everything
 /// else -> Figtree), so a rule-violating role cannot exist.

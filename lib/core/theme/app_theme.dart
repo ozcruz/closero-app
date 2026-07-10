@@ -9,6 +9,7 @@ ThemeData closTheme() {
   const spacing = ClosSpacing();
   const radius = ClosRadius();
   const type = ClosType();
+  const layout = ClosLayout();
 
   return ThemeData(
     useMaterial3: true,
@@ -29,7 +30,7 @@ ThemeData closTheme() {
       outline: colors.border,
       outlineVariant: colors.border2,
     ),
-    extensions: const [colors, spacing, radius, type],
+    extensions: const [colors, spacing, radius, type, layout],
   );
 }
 
@@ -39,4 +40,5 @@ extension ClosThemeContext on BuildContext {
   ClosSpacing get sp => Theme.of(this).extension<ClosSpacing>()!;
   ClosRadius get closRadius => Theme.of(this).extension<ClosRadius>()!;
   ClosType get closType => Theme.of(this).extension<ClosType>()!;
+  ClosLayout get closLayout => Theme.of(this).extension<ClosLayout>()!;
 }

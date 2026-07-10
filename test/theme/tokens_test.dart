@@ -103,6 +103,28 @@ void main() {
     });
   });
 
+  group('ClosLayout', () {
+    const l = ClosLayout();
+
+    test('matches the JSON layout section exactly', () {
+      final layout = tokens['layout'] as Map<String, dynamic>;
+      expect(l.sidebar, (layout['sidebar'] as num).toDouble());
+      final coaching = layout['coachingPanel'] as Map<String, dynamic>;
+      expect(l.coachingPanel, (coaching['width'] as num).toDouble());
+      expect(l.collapseBelow, (coaching['collapseBelow'] as num).toDouble());
+      expect(
+        l.siteContainerMaxWidth,
+        ((layout['siteContainer'] as Map<String, dynamic>)['maxWidth'] as num)
+            .toDouble(),
+      );
+      expect(
+        l.heroColumnMaxWidth,
+        ((layout['heroColumn'] as Map<String, dynamic>)['maxWidth'] as num)
+            .toDouble(),
+      );
+    });
+  });
+
   group('ClosType', () {
     const t = ClosType();
 
@@ -165,12 +187,13 @@ void main() {
   });
 
   group('closTheme', () {
-    test('exposes all four extensions and the base background', () {
+    test('exposes all five extensions and the base background', () {
       final theme = closTheme();
       expect(theme.extension<ClosColors>(), isNotNull);
       expect(theme.extension<ClosSpacing>(), isNotNull);
       expect(theme.extension<ClosRadius>(), isNotNull);
       expect(theme.extension<ClosType>(), isNotNull);
+      expect(theme.extension<ClosLayout>(), isNotNull);
       expect(theme.scaffoldBackgroundColor, ClosColors.bone.base);
     });
   });

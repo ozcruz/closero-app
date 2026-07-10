@@ -31,7 +31,7 @@ Planning session output. Companion docs: `Closero — closero-app CLAUDE.md (202
 | Codegen/testing | build_runner, freezed, json_serializable; **alchemist** (or golden_toolkit) for golden tests; integration_test | Goldens are the drift guard against the prototype screenshots. |
 | Web renderer/hosting | Default CanvasKit; deploy `build/web` to **Cloudflare Pages as a separate project → app.closero.app** | Keeps closero-site untouched. Grain, rings, and custom paint want CanvasKit. Initial load is a few MB; acceptable behind a login, add a branded loading shell. |
 
-**Flagged spikes:** (1) Safari/Chrome mic + autoplay on Flutter Web, week 1, half a day. (2) Managed realtime vs hand-rolled pipeline, week 4, 2-3 days. (3) Rive lipsync driven by Azure viseme events (map viseme IDs to Rive inputs), week 4, half a day.
+**Flagged spikes:** (1) Safari/Chrome mic + autoplay on Flutter Web, week 1, half a day. (2) Managed realtime vs hand-rolled pipeline, week 4, 2-3 days. (3) Rive lipsync driven by Azure viseme events, week 4, half a day: validate the `context/rive-contract.md` mapping table by eye against real Azure viseme output and tune `viseme_mapping.dart`.
 
 ## 2. Project structure (feature-first)
 
@@ -101,7 +101,7 @@ Build order within the library: primitives first (1-6), then data displays (7-13
 | 15 | ClosModal → ScenarioPreviewModal | open/close, methodology tags live HERE (never on cards) | library + dashboard, one shared scenario source |
 | 16 | ScenarioCard | start, personal-best (accent only at "strong"), in-progress dot, **locked** (B2B/Methodologies on free) | library grid |
 | 17 | TranscriptLine | rep/persona bubble, annotation green/warn/red text (no tinted chips) | transcript view, sim transcript tab |
-| 18 | AvatarStack | gradient placeholder (art-1..N) base layer + optional Rive layer; placeholder is permanent | library cards, both sim stages |
+| 18 | AvatarStack | gradient placeholder (art-1..N) base layer + optional Rive layer (mounted per `context/rive-contract.md`; the widget only hosts the layer, the state machine driver is its own session); placeholder is permanent | library cards, both sim stages |
 | 19 | GrainOverlay | static 2.5% noise | shell |
 
 Accessibility baked into the library, not retrofitted: `Semantics` labels on every icon-only control, 44px minimum tap targets enforced in the button/nav primitives, contrast per token usage rules (body copy = `body` token, never dim1/dim2).
@@ -119,6 +119,8 @@ Accessibility baked into the library, not retrofitted: `Semantics` labels on eve
 9. **Scoring screens on mock data** — post-call score + full transcript (720px centered, read-only) + Key Moments deep links.
 10. **Sim screens with faked conversation** — both stages (cold call audio-only + video full-screen stage w/ frosted topbar), coaching panel (Coaching tab default), momentum dots, scripted persona turns behind the real `SimSession` interface. `startSimSession` called from day one (v1 just increments) so the cap slots in with no client update.
 11. **Real pipeline** (section 6) — cold call first, then the video stage rides the same pipeline.
+12. **Analytics + funnel events** — one AnalyticsService (PostHog, uid-identified, no PII in payloads), event consts in one file, the full signup → onboarding → sim → cap_hit → upgrade → purchase funnel instrumented before launch. Monetization cannot be tuned blind.
+13. **Error + edge states** — 404/unknown route (prototype has a 404; no screenshot exists, match shell style), mic-permission denied pre-call check, mid-call WSS reconnect then graceful abort (aborted sessions never count against the cap), TTS stall fallback to text, stream-error retry states. These protect the first-call experience, which is the conversion moment.
 
 Justification: strict dependency order (nothing above needs anything below it), and every step ends in something demoable, which keeps a weekly-demo cadence honest. Sim last because it is the only unknown; everything else is deterministic assembly against a locked spec.
 
@@ -152,6 +154,7 @@ Flutter Web client
 - **Coaching guardrail:** every hint must be observable from audio/transcript only (voice, pacing, filler words, talk ratio, discovery questions). No body-language claims. Hint detection runs OFF the turn path so coaching never adds latency.
 - **Cost-per-session model** (~12 min canonical, verified pricing 2026-07-07): Deepgram Nova-3 streaming ~$0.005-0.008/min × 12 ≈ $0.08; Azure TTS $16/1M chars × ~5K chars ≈ $0.08 (500K chars/mo free covers ~100 sessions early); GPT-5.4 mini ($0.75/M in, $4.50/M out, caching on) across turns + hints + scoring ≈ $0.05-0.10. **Total ~$0.20-0.30/session.** Free user's 5 sessions ≈ $1-1.50/mo worst case. Measure real numbers in week 4 before spending on acquisition (audit risk #2).
 - **Video Sim delta:** same pipeline, zero new vendors. Swaps the stage widget: full-screen video stage, frosted topbar, blurred office bg (blur(3px) brightness(0.28) saturate(0.6) scale(1.06), no faces), Rive avatar lipsync driven by the Azure viseme timeline (viseme ID + audio offset mapped to Rive inputs). Accent: none (mic-on is cold-call's).
+- **Rive rig contract + lipsync driver:** the avatar/asset interface is specified in `context/rive-contract.md` and it is binding: one state machine named `LipSync`, `viseme` Number input driving 8 mouth groups (rest, AA, EE, FF, LL, MM, OO, SS), `Blink`/`HalfBlink`/`Breath` Triggers running independently of mouth state, plus production-rig idle inputs (`Sway`, `Saccade`) once locked. The test rig validates this structure; the production rig keeps the exact names so the asset swap is a file drop with zero code change. Named deliverable: `lib/core/services/viseme_mapping.dart`, the ONE file mapping Azure viseme IDs 0-21 to the 8 rig groups, built once (own session, before the broker), referenced by LiveSimSession. Loading is via `StateMachineController` + SMI input handles, never the plain `RiveAnimation.asset` widget. Hard sync rule: viseme input updates are scheduled against just_audio's playback position per utterance, never against message-arrival time, because a sentence's visemes arrive over the socket before its audio is heard. Blink/breath (and idle life) run on their own randomized timers, fully decoupled from the viseme stream.
 - **Interim stubs:** `SimSession` interface with `ScriptedSimSession` (canned persona turns, timed fake hints) and `LiveSimSession` (real pipeline). Screens bind to the interface, so step 10 → 11 is a swap, not a rewrite.
 
 ## 7. Risks (top 7, with mitigations)

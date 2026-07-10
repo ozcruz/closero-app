@@ -97,6 +97,7 @@ String generate(Map<String, dynamic> tokens, String sourceHash) {
   final typography = tokens['typography'] as Map<String, dynamic>;
   final spacing = tokens['spacing'] as Map<String, dynamic>;
   final radius = tokens['radius'] as Map<String, dynamic>;
+  final layout = tokens['layout'] as Map<String, dynamic>;
 
   final families = typography['families'] as Map<String, dynamic>;
   final bodyFamily = (families['body'] as Map<String, dynamic>)['value'] as String;
@@ -126,6 +127,7 @@ String generate(Map<String, dynamic> tokens, String sourceHash) {
   writeColors(b, colors);
   writeSpacing(b, spacingScale, headlineToSubtext, sectionGap);
   writeRadius(b, cardRadius, buttonRadius);
+  writeLayout(b, layout);
   writeType(b, bodyFamily, displayFamily);
 
   return b.toString();
@@ -275,6 +277,52 @@ void writeRadius(StringBuffer b, double card, double button) {
     ..writeln()
     ..writeln('  @override')
     ..writeln('  ClosRadius lerp(ClosRadius? other, double t) => this;')
+    ..writeln('}')
+    ..writeln();
+}
+
+void writeLayout(StringBuffer b, Map<String, dynamic> layout) {
+  double numField(String section, String key) {
+    final value = (layout[section] as Map<String, dynamic>)[key];
+    if (value is! num) {
+      stderr.writeln('gen_tokens: layout.$section.$key is not a number.');
+      exit(2);
+    }
+    return value.toDouble();
+  }
+
+  final sidebar = (layout['sidebar'] as num).toDouble();
+  final coachingPanel = numField('coachingPanel', 'width');
+  final collapseBelow = numField('coachingPanel', 'collapseBelow');
+  final siteContainer = numField('siteContainer', 'maxWidth');
+  final heroColumn = numField('heroColumn', 'maxWidth');
+
+  b
+    ..writeln('/// Layout tokens: fixed chrome widths and breakpoints.')
+    ..writeln('class ClosLayout extends ThemeExtension<ClosLayout> {')
+    ..writeln('  const ClosLayout();')
+    ..writeln()
+    ..writeln('  /// Expanded sidebar width.')
+    ..writeln('  final double sidebar = ${fmt(sidebar)};')
+    ..writeln()
+    ..writeln('  /// Live-sim coaching panel width.')
+    ..writeln('  final double coachingPanel = ${fmt(coachingPanel)};')
+    ..writeln()
+    ..writeln('  /// Below this viewport width, collapsible chrome')
+    ..writeln('  /// (coaching panel, sidebar) collapses.')
+    ..writeln('  final double collapseBelow = ${fmt(collapseBelow)};')
+    ..writeln()
+    ..writeln('  /// Max content container width.')
+    ..writeln('  final double siteContainerMaxWidth = ${fmt(siteContainer)};')
+    ..writeln()
+    ..writeln('  /// Max hero column width.')
+    ..writeln('  final double heroColumnMaxWidth = ${fmt(heroColumn)};')
+    ..writeln()
+    ..writeln('  @override')
+    ..writeln('  ClosLayout copyWith() => const ClosLayout();')
+    ..writeln()
+    ..writeln('  @override')
+    ..writeln('  ClosLayout lerp(ClosLayout? other, double t) => this;')
     ..writeln('}')
     ..writeln();
 }
