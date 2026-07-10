@@ -8,6 +8,7 @@ export 'clos_card.dart';
 export 'clos_icons.dart';
 export 'clos_modal.dart';
 export 'clos_scaffold.dart';
+export 'clos_segmented.dart';
 export 'clos_text_field.dart';
 export 'clos_toggle.dart';
 export 'closero_wordmark.dart';

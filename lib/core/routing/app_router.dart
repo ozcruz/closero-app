@@ -10,6 +10,7 @@ import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
+import '../../features/library/presentation/library_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../widgets/widgets.dart';
 import 'app_routes.dart';
@@ -134,7 +135,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: SimulationsRoute.path,
-            builder: (context, state) => shellStub('Simulations'),
+            builder: (context, state) => const LibraryScreen(),
           ),
           GoRoute(
             path: ProgressRoute.path,

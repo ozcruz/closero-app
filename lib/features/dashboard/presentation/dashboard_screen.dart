@@ -5,6 +5,8 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../library/data/scenario_repository.dart';
+import '../../library/presentation/scenario_preview_modal.dart';
 import '../data/dashboard_repository.dart';
 import '../domain/dashboard_data.dart';
 
@@ -189,13 +191,23 @@ class _TopBar extends ConsumerWidget {
 
 /// Next-session hero: label, title, description, tags, CTAs on the
 /// left; persona avatar on the right; meta strip along the foot.
-class _HeroCard extends StatelessWidget {
+class _HeroCard extends ConsumerWidget {
   const _HeroCard({required this.scenario});
 
   final FeaturedScenario scenario;
 
+  /// Opens the shared Scenario Preview modal for the hero, resolved
+  /// from the one shared catalog by id (the repository test pins that
+  /// every hero id resolves).
+  Future<void> _preview(BuildContext context, WidgetRef ref) async {
+    final resolved =
+        await ref.read(scenarioRepositoryProvider).byId(scenario.id);
+    if (resolved == null || !context.mounted) return;
+    await showScenarioPreviewModal(context, scenario: resolved);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.closColors;
     final sp = context.sp;
     final type = context.closType;
@@ -264,10 +276,10 @@ class _HeroCard extends StatelessWidget {
                                 ColdCallSimRoute(scenarioId: scenario.id)
                                     .go(context),
                           ),
-                          // Enabled once the Scenario Preview modal lands
-                          // with the Library session; a dead tap would
-                          // break the mechanically-true rule.
-                          const GhostButton(label: 'Preview scenario'),
+                          GhostButton(
+                            label: 'Preview scenario',
+                            onPressed: () => _preview(context, ref),
+                          ),
                         ],
                       ),
                     ],

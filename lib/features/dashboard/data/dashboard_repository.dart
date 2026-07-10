@@ -110,10 +110,10 @@ const homeownerFeatured = FeaturedScenario(
   personaLine: 'Denise, homeowner',
   initials: 'DW',
   tint: AvatarArtTint.umber,
-  duration: '~10 min',
+  duration: '~12 min',
   targets: 'Objection handling',
-  difficultyLabel: 'Moderate',
-  difficulty: 3,
+  difficultyLabel: 'Demanding',
+  difficulty: 4,
 );
 
 /// Resolves the onboarding-saved scenario id to its hero fixture.
