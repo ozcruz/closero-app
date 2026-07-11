@@ -11,6 +11,15 @@ import 'package:flutter/foundation.dart';
 /// firestore.rules). It never updates entitlement, sessionsUsed, or
 /// usageMonth; those flip server-side via the RevenueCat webhook and
 /// Cloud Functions.
+/// One linked sign-in method on the account, decoupled from
+/// firebase_auth's UserInfo so fakes can construct it.
+class LinkedProvider {
+  const LinkedProvider({required this.providerId, this.email});
+
+  final String providerId;
+  final String? email;
+}
+
 class AuthService {
   AuthService(this._auth, this._firestore);
 
@@ -104,6 +113,104 @@ class AuthService {
     });
   }
 
+  /// Linked sign-in methods for the current user ('password',
+  /// 'google.com', 'apple.com', ...).
+  List<LinkedProvider> get linkedProviders =>
+      _auth.currentUser?.providerData
+          .map((p) => LinkedProvider(providerId: p.providerId, email: p.email))
+          .toList() ??
+      const [];
+
+  bool get hasPasswordProvider =>
+      linkedProviders.any((p) => p.providerId == 'password');
+
+  /// Changes the password after reauthenticating with the current one
+  /// (Firebase requires a recent login for credential changes).
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw FirebaseAuthException(code: 'user-not-found');
+    }
+    await user.reauthenticateWithCredential(
+      EmailAuthProvider.credential(email: email, password: currentPassword),
+    );
+    await user.updatePassword(newPassword);
+  }
+
+  /// Links an SSO provider to the signed-in account via the web popup
+  /// flow. [providerId] is 'google.com' or 'apple.com'.
+  Future<void> linkProvider(String providerId) async {
+    final user = _auth.currentUser;
+    if (user == null) throw FirebaseAuthException(code: 'user-not-found');
+    if (!kIsWeb) {
+      throw UnsupportedError('Provider linking ships with the iOS target.');
+    }
+    await user.linkWithPopup(_oauthProvider(providerId));
+    // linkWithPopup mutates providerData in place; reload so
+    // userChanges emits and watchers rebuild.
+    await user.reload();
+  }
+
+  /// Unlinks an SSO provider. Guarded so the account always keeps at
+  /// least one sign-in method.
+  Future<void> unlinkProvider(String providerId) async {
+    final user = _auth.currentUser;
+    if (user == null) throw FirebaseAuthException(code: 'user-not-found');
+    if (user.providerData.length <= 1) {
+      throw StateError('Cannot remove the only sign-in method.');
+    }
+    await user.unlink(providerId);
+    await user.reload();
+  }
+
+  /// Deletes the Firebase Auth account. Reauthenticates first
+  /// (password when given, else the first linked SSO provider), then
+  /// blanks the client-writable profile fields on users/{uid}. The doc
+  /// itself is server-deleted later (firestore.rules deny client
+  /// deletes); blanking removes the personal data now.
+  Future<void> deleteAccount({String? currentPassword}) async {
+    final user = _auth.currentUser;
+    if (user == null) throw FirebaseAuthException(code: 'user-not-found');
+
+    final email = user.email;
+    if (currentPassword != null && email != null) {
+      await user.reauthenticateWithCredential(
+        EmailAuthProvider.credential(email: email, password: currentPassword),
+      );
+    } else if (kIsWeb) {
+      final sso = user.providerData
+          .where((p) => p.providerId != 'password')
+          .map((p) => p.providerId)
+          .firstOrNull;
+      if (sso != null) {
+        await user.reauthenticateWithPopup(_oauthProvider(sso));
+      }
+    }
+
+    try {
+      await _firestore.collection('users').doc(user.uid).update({
+        'email': FieldValue.delete(),
+        'displayName': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } on Object catch (e) {
+      // Best effort; deletion proceeds either way.
+      debugPrint('profile blanking failed: $e');
+    }
+
+    await user.delete();
+  }
+
+  static AuthProvider _oauthProvider(String providerId) =>
+      switch (providerId) {
+        'google.com' => GoogleAuthProvider(),
+        _ => OAuthProvider(providerId),
+      };
+
   /// Creates users/{uid} on first sign-in if it doesn't exist yet.
   /// Idempotent and non-throwing so it never blocks the auth flow;
   /// mirrors the site's ensureUserDoc.
@@ -162,6 +269,13 @@ String authErrorMessage(Object error) {
       'Your browser blocked the sign-in popup. Allow popups and retry.',
     'network-request-failed' =>
       'Network problem. Check your connection and retry.',
+    'requires-recent-login' =>
+      'For security, log out and back in, then retry this change.',
+    'credential-already-in-use' ||
+    'account-exists-with-different-credential' =>
+      'That account is already connected to a different Closero login.',
+    'provider-already-linked' => 'That provider is already connected.',
+    'no-such-provider' => 'That provider is not connected.',
     _ => 'Something went wrong. Please try again.',
   };
 }

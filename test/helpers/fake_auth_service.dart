@@ -13,7 +13,12 @@ class FakeAuthService implements AuthService {
   String? lastEmail;
   String? lastPassword;
   String? lastDisplayName;
+  String? lastProviderId;
   bool verified = false;
+
+  /// Linked sign-in methods reported by [linkedProviders] /
+  /// [hasPasswordProvider]; tests mutate this to shape the account.
+  List<LinkedProvider> providers = [];
 
   void _record(String call) {
     calls.add(call);
@@ -79,5 +84,39 @@ class FakeAuthService implements AuthService {
   Future<void> updateDisplayName(String displayName) async {
     lastDisplayName = displayName;
     _record('updateDisplayName');
+  }
+
+  @override
+  List<LinkedProvider> get linkedProviders => providers;
+
+  @override
+  bool get hasPasswordProvider =>
+      providers.any((p) => p.providerId == 'password');
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    lastPassword = newPassword;
+    _record('changePassword');
+  }
+
+  @override
+  Future<void> linkProvider(String providerId) async {
+    lastProviderId = providerId;
+    _record('linkProvider');
+  }
+
+  @override
+  Future<void> unlinkProvider(String providerId) async {
+    lastProviderId = providerId;
+    _record('unlinkProvider');
+  }
+
+  @override
+  Future<void> deleteAccount({String? currentPassword}) async {
+    lastPassword = currentPassword;
+    _record('deleteAccount');
   }
 }

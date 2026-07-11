@@ -18,6 +18,9 @@ void main() {
     'achievements': AchievementsIcon(),
     'settings': SettingsIcon(),
     'mail': MailIcon(),
+    'check': CheckIcon(),
+    'close': CloseIcon(),
+    'lock': LockIcon(),
   };
 
   Widget row(Color color, double size) => Row(

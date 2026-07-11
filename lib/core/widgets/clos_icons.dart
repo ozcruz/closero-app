@@ -205,6 +205,73 @@ class MailIcon extends StatelessWidget {
   Widget build(BuildContext context) => const _ClosIcon(_paint);
 }
 
+/// Checkmark, for plan feature lists and the upgrade-success badge.
+/// The rise stroke runs along the -60 degree signature axis.
+class CheckIcon extends StatelessWidget {
+  const CheckIcon({super.key});
+
+  static void _paint(Canvas canvas, double u, Color color) {
+    final check = Path()
+      ..moveTo(3.4 * u, 8.4 * u)
+      ..lineTo(6.1 * u, 10.9 * u)
+      ..lineTo(10.9 * u, 4.1 * u);
+    canvas.drawPath(check, _stroke(u, color, 1.4));
+  }
+
+  @override
+  Widget build(BuildContext context) => const _ClosIcon(_paint);
+}
+
+/// Dismiss / not-included: two crossing strokes, one laid along the -60
+/// degree signature axis (so the X sits slightly rotated by design).
+class CloseIcon extends StatelessWidget {
+  const CloseIcon({super.key});
+
+  static void _paint(Canvas canvas, double u, Color color) {
+    final paint = _stroke(u, color, 1.4);
+    // Along the -60 degree axis and its perpendicular.
+    canvas.drawLine(
+      Offset(5.6 * u, 10.8 * u),
+      Offset(9.4 * u, 4.2 * u),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(4.2 * u, 5.6 * u),
+      Offset(10.8 * u, 9.4 * u),
+      paint,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => const _ClosIcon(_paint);
+}
+
+/// Padlock, for gated states (session limit). Same drawing as the
+/// scenario-card lock: the shackle ends short on the right shoulder so
+/// the opening sits on the -60 degree signature axis.
+class LockIcon extends StatelessWidget {
+  const LockIcon({super.key});
+
+  static void _paint(Canvas canvas, double u, Color color) {
+    final paint = _stroke(u, color);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(3.2 * u, 6.8 * u, 11.8 * u, 12.4 * u),
+        Radius.circular(1.3 * u),
+      ),
+      paint,
+    );
+    final shackle = Path()
+      ..moveTo(5.3 * u, 6.8 * u)
+      ..lineTo(5.3 * u, 5.2 * u)
+      ..cubicTo(5.3 * u, 3.4 * u, 9.7 * u, 3.4 * u, 9.7 * u, 5.2 * u);
+    canvas.drawPath(shackle, paint);
+  }
+
+  @override
+  Widget build(BuildContext context) => const _ClosIcon(_paint);
+}
+
 /// The brand mark: the app icon's ring alone, for no-sidebar screens.
 /// Geometry is ported 1:1 from the locked closero-icon.svg (ellipse
 /// rx 269.76 / ry 303.40 / stroke 133.20 on a 1000 grid, sliced by a

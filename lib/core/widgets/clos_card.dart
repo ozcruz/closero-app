@@ -9,6 +9,11 @@ enum ClosCardVariant {
 
   /// Inset panel inside a card: surface2 bg, secondary border.
   inset,
+
+  /// Highlighted card among peers (e.g. the recommended pricing tier):
+  /// surface bg with a dim1 border. Emphasis by border only, never a
+  /// tinted fill or glow.
+  emphasized,
 }
 
 /// The base card surface: token bg, 1px border, card radius.
@@ -78,7 +83,11 @@ class ClosCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: inset ? colors.surface2 : colors.surface,
         border: Border.all(
-          color: inset ? colors.border2 : colors.border,
+          color: switch (variant) {
+            ClosCardVariant.inset => colors.border2,
+            ClosCardVariant.emphasized => colors.dim1,
+            ClosCardVariant.normal => colors.border,
+          },
         ),
         borderRadius: context.closRadius.cardRadius,
       ),

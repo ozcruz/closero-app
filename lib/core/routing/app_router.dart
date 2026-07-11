@@ -9,9 +9,16 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
+import '../../features/billing/presentation/session_limit_screen.dart';
+import '../../features/billing/presentation/upgrade_screen.dart';
+import '../../features/billing/presentation/upgrade_success_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/library/presentation/library_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/settings/presentation/change_password_screen.dart';
+import '../../features/settings/presentation/connected_accounts_screen.dart';
+import '../../features/settings/presentation/delete_account_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
 import '../widgets/widgets.dart';
 import 'app_routes.dart';
 import 'app_shell.dart';
@@ -86,6 +93,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: OnboardingRoute.path,
         builder: (context, state) => const OnboardingScreen(),
       ),
+      // The billing wall lives outside the shell per prototypes 16-18:
+      // brand-ring topbar, no sidebar.
+      GoRoute(
+        path: UpgradeRoute.path,
+        builder: (context, state) => const UpgradeScreen(),
+      ),
+      GoRoute(
+        path: SessionLimitRoute.path,
+        builder: (context, state) => const SessionLimitScreen(),
+      ),
+      GoRoute(
+        path: UpgradeSuccessRoute.path,
+        builder: (context, state) => const UpgradeSuccessScreen(),
+      ),
       GoRoute(
         path: ColdCallSimRoute.path,
         builder: (context, state) => standaloneStub(
@@ -151,39 +172,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: SettingsRoute.path,
-            builder: (context, state) => shellStub(
-              'Settings',
-              // Temporary until the settings session lands: the only
-              // way out of a signed-in session lives here.
-              action: GhostButton(
-                label: 'Log out',
-                onPressed: authService.signOut,
-              ),
-            ),
+            builder: (context, state) => const SettingsScreen(),
           ),
           GoRoute(
             path: SettingsPasswordRoute.path,
-            builder: (context, state) => shellStub('Change password'),
+            builder: (context, state) => const ChangePasswordScreen(),
           ),
           GoRoute(
             path: SettingsConnectedRoute.path,
-            builder: (context, state) => shellStub('Connected accounts'),
+            builder: (context, state) => const ConnectedAccountsScreen(),
           ),
           GoRoute(
             path: SettingsDeleteRoute.path,
-            builder: (context, state) => shellStub('Delete account'),
-          ),
-          GoRoute(
-            path: UpgradeRoute.path,
-            builder: (context, state) => shellStub('Upgrade'),
-          ),
-          GoRoute(
-            path: SessionLimitRoute.path,
-            builder: (context, state) => shellStub('Session limit'),
-          ),
-          GoRoute(
-            path: UpgradeSuccessRoute.path,
-            builder: (context, state) => shellStub('Upgrade complete'),
+            builder: (context, state) => const DeleteAccountScreen(),
           ),
         ],
       ),

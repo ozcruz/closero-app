@@ -52,6 +52,18 @@ void main() {
           ),
         ),
         GoldenTestScenario(
+          name: 'emphasized (recommended pricing tier)',
+          child: onBase(
+            child: SizedBox(
+              width: 320,
+              child: ClosCard(
+                variant: ClosCardVariant.emphasized,
+                child: sampleContent('Closer'),
+              ),
+            ),
+          ),
+        ),
+        GoldenTestScenario(
           name: 'hairline (auth card treatment)',
           child: onBase(
             child: SizedBox(
