@@ -91,7 +91,15 @@ void main() {
 
   testWidgets('unconfigured checkout disables the CTA and says why',
       (tester) async {
-    await pump(tester, app(userDocStream: Stream.value(freeUser)));
+    // The real default now bakes in the live purchase link, so inject an
+    // explicitly-empty service to exercise the missing-config path.
+    await pump(
+      tester,
+      app(
+        userDocStream: Stream.value(freeUser),
+        billing: const WebBillingService(purchaseLinkBase: ''),
+      ),
+    );
     expect(
       find.textContaining('Checkout is not configured'),
       findsOneWidget,

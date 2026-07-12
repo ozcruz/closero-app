@@ -60,6 +60,22 @@ class StreakPill extends StatelessWidget {
   }
 }
 
+/// Standalone streak flame glyph for stat tiles and headers, sized by
+/// the ambient [IconTheme] like the icon set but always drawn in the
+/// flame token (with [StreakPill], the only places that token appears).
+class FlameGlyph extends StatelessWidget {
+  const FlameGlyph({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final size = IconTheme.of(context).size ?? 15;
+    return CustomPaint(
+      size: Size(size * 12 / 14, size),
+      painter: _FlamePainter(color: context.closColors.flame),
+    );
+  }
+}
+
 /// Streak flame: teardrop outline with the signature -60 degree gap
 /// at the tip, 1.3 stroke, round caps. Flame color excepted from the
 /// grayscale icon rule.

@@ -10,7 +10,13 @@ library;
 /// the webhook can flip users/{uid}.entitlement.
 ///
 /// Override with: --dart-define=RC_PURCHASE_LINK=https://pay.rev.cat/...
-const String kRcPurchaseLinkBase = String.fromEnvironment('RC_PURCHASE_LINK');
+///
+/// Default is the live Closer Web Purchase Link (RevenueCat Web Billing app
+/// appacabc1da1a → Stripe). It is a public token, safe to check in.
+const String kRcPurchaseLinkBase = String.fromEnvironment(
+  'RC_PURCHASE_LINK',
+  defaultValue: 'https://pay.rev.cat/udnnzqorhqrkqlor',
+);
 
 /// Hosted subscription-management URL, if one is configured. RevenueCat
 /// Web Billing has no deterministic per-user portal URL (the portal link

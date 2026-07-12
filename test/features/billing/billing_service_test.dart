@@ -27,6 +27,9 @@ void main() {
     test('unconfigured build reports itself and never launches', () async {
       final launched = <Uri>[];
       final service = WebBillingService(
+        // Explicit empty base: the real default now bakes in the live link,
+        // so the unconfigured case has to be constructed on purpose.
+        purchaseLinkBase: '',
         openUrl: (uri) async {
           launched.add(uri);
           return true;

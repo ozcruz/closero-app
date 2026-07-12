@@ -625,108 +625,16 @@ class _RecentSessionsCard extends StatelessWidget {
             ),
           ),
           for (var i = 0; i < sessions.length; i++)
-            _SessionRow(session: sessions[i], divided: i > 0),
-        ],
-      ),
-    );
-  }
-}
-
-class _SessionRow extends StatefulWidget {
-  const _SessionRow({required this.session, required this.divided});
-
-  final RecentSession session;
-  final bool divided;
-
-  @override
-  State<_SessionRow> createState() => _SessionRowState();
-}
-
-class _SessionRowState extends State<_SessionRow> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.closColors;
-    final sp = context.sp;
-    final session = widget.session;
-
-    return Semantics(
-      button: true,
-      label: '${session.title}, ${session.methodology}, '
-          '${session.timeAgo}, scored ${session.score} percent',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: () => ScoreRoute(sessionId: session.id).go(context),
-          child: ExcludeSemantics(
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 56),
-              padding:
-                  EdgeInsets.symmetric(horizontal: sp.sp6, vertical: sp.sp3),
-              decoration: BoxDecoration(
-                color: _hovered ? colors.surface2 : null,
-                border: widget.divided
-                    ? Border(top: BorderSide(color: colors.border))
-                    : null,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: colors.surface2,
-                      border: Border.all(color: colors.border2),
-                      borderRadius: context.closRadius.buttonRadius,
-                    ),
-                    child: IconTheme.merge(
-                      data: IconThemeData(color: colors.dim2, size: 15),
-                      child: const Center(child: SimulationsIcon()),
-                    ),
-                  ),
-                  SizedBox(width: sp.sp3),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          session.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.closType.titleMedium,
-                        ),
-                        SizedBox(height: sp.sp1),
-                        Text(
-                          '${session.methodology} · ${session.timeAgo}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: ClosType.style(
-                            fontSize: 12,
-                            weight: FontWeight.w400,
-                            color: colors.dim1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: sp.sp4),
-                  Text(
-                    '${session.score}%',
-                    style: ClosType.style(
-                      fontSize: 14,
-                      weight: FontWeight.w700,
-                      color: scoreTextColor(colors, session.score),
-                    ),
-                  ),
-                ],
-              ),
+            SessionRow(
+              title: sessions[i].title,
+              methodology: sessions[i].methodology,
+              timeAgo: sessions[i].timeAgo,
+              score: sessions[i].score,
+              divided: i > 0,
+              onTap: () =>
+                  ScoreRoute(sessionId: sessions[i].id).go(context),
             ),
-          ),
-        ),
+        ],
       ),
     );
   }

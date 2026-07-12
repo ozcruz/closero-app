@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/achievements/presentation/achievements_screen.dart';
 import '../../features/auth/application/auth_providers.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
@@ -14,7 +15,9 @@ import '../../features/billing/presentation/upgrade_screen.dart';
 import '../../features/billing/presentation/upgrade_success_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/library/presentation/library_screen.dart';
+import '../../features/methodologies/presentation/methodologies_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/progress/presentation/progress_screen.dart';
 import '../../features/settings/presentation/change_password_screen.dart';
 import '../../features/settings/presentation/connected_accounts_screen.dart';
 import '../../features/settings/presentation/delete_account_screen.dart';
@@ -51,9 +54,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   // Screens whose build session hasn't landed yet render an honest
   // placeholder; the routes themselves are final.
-  Widget shellStub(String title, {String? detail, Widget? action}) =>
-      PlaceholderScreen(title: title, detail: detail, action: action);
-
   Widget standaloneStub(String title, {String? detail}) =>
       ClosScaffold(body: PlaceholderScreen(title: title, detail: detail));
 
@@ -160,15 +160,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: ProgressRoute.path,
-            builder: (context, state) => shellStub('My progress'),
+            builder: (context, state) => const ProgressScreen(),
           ),
           GoRoute(
             path: MethodologiesRoute.path,
-            builder: (context, state) => shellStub('Methodologies'),
+            builder: (context, state) => const MethodologiesScreen(),
           ),
           GoRoute(
             path: AchievementsRoute.path,
-            builder: (context, state) => shellStub('Achievements'),
+            builder: (context, state) => const AchievementsScreen(),
           ),
           GoRoute(
             path: SettingsRoute.path,
