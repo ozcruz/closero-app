@@ -13,6 +13,7 @@ class DeltaPill extends StatelessWidget {
     required this.sessionNumber,
     this.unit,
     this.showComparisonLabel = false,
+    this.comparisonLabelOverride,
   });
 
   /// Signed point change, e.g. 6 or -3.
@@ -26,6 +27,11 @@ class DeltaPill extends StatelessWidget {
 
   /// When true, renders the comparison label before the pill.
   final bool showComparisonLabel;
+
+  /// Replaces the session-number-derived label. Session docs store
+  /// the delta basis at write time; screens rendering a stored basis
+  /// pass its label here so history never re-renders differently.
+  final String? comparisonLabelOverride;
 
   /// The comparison copy for a given session number.
   static String comparisonLabel(int sessionNumber) =>
@@ -43,7 +49,7 @@ class DeltaPill extends StatelessWidget {
             : colors.mid;
     final sign = delta > 0 ? '+' : '';
     final text = unit == null ? '$sign$delta' : '$sign$delta $unit';
-    final label = comparisonLabel(sessionNumber);
+    final label = comparisonLabelOverride ?? comparisonLabel(sessionNumber);
 
     final pill = Container(
       padding: EdgeInsets.symmetric(horizontal: sp.sp2, vertical: sp.sp1),

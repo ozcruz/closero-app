@@ -45,7 +45,7 @@ The UI shows 5 numbers; the background records much more, per session, so scorin
 - **Overall score** = `rolling10` composite (mean of the last 10 completed sessions; all of them if <10). This is the number on the Dashboard, and the input to the income mapping. A single session never moves earning potential directly.
 - **Consistency rule (plain version).** A skill tier requires proof, not one hot call. A tier is CONFIRMED when at least 5 of the user's last 7 completed sessions score inside that tier's band. Until then the UI shows the tier as "in reach", with copy like "2 more calls at this level and this is your tier". That line is the motivation loop: the path to the next income band is always a concrete number of good sessions, which is a practice prompt, not a grade.
 - **Income mapping** (copy rules from CLAUDE.md apply: market bands at a skill tier, "per published comp data", never a personal prediction): rolling10 <60 → entry band, 60-74 → mid band ($64K canonical), 75+ confirmed per the consistency rule → next tier band ($85-95K canonical). The app NEVER says "you will earn X"; it says "reps who sell at this level typically earn X-Y, per published comp data".
-- **Freshness decay (proposed, confirm):** if no completed session in 21 days, the tier shows as "needs a warm-up" (copy, not a score penalty). Skills fade; punishing the number feels unfair, nudging a session does not.
+- **Freshness decay (confirmed 2026-07-11):** if no completed session in 21 days, the tier shows as "needs a warm-up" (copy, not a score penalty). Skills fade; punishing the number feels unfair, nudging a session does not.
 - Skill Breakdown on the Dashboard = category `rolling10` values, weakest first, each with its own threshold color. The weakest category is the "fastest path up" input for Achievements.
 
 ## Hint taxonomy (in-call coaching, off the turn path)
@@ -70,7 +70,7 @@ sessions/{id}:
   uid, scenarioId, simType: 'cold_call'|'video', methodologyKey?: string
   status: 'complete'|'aborted', abortReason?: string
   startedAt, endedAt, durationSec
-  score: { total: int, categories: { discovery, objections, clarity, listening, closing } }   // absent when aborted
+  score: { total: int, categories: { objections, discovery, closing, rapport, tonality }, signals?: { <categoryKey>: { <subKey>: int } } }   // absent when aborted
   stats: { ...block above }
   keyMoments: [ { type, categoryKey, text, utteranceIndex } ]   // max 6: up to 2 per type
   transcript: [ { speaker: 'rep'|'persona', text, tsMs, annotation?: 'good'|'warn'|'miss' } ]
@@ -90,7 +90,7 @@ sessions/{id}:
 
 Streaks measure showing up; skill scores measure selling. The two never mix: a streak must not inflate any category score or the income tier, or the earning-potential claim stops being defensible ("practiced daily" is not "sells at the $85-95K level"). Streaks reward the user through access and recognition instead:
 
-- **What counts (the commit point):** a session counts toward the streak once it reaches the commit point, defined at launch as 3+ minutes of real conversation OR the first `good` hint on an objection exchange, whichever comes first. A full completed session is NOT required; requiring it makes streaks feel like homework. After launch, replace the 3-minute guess with the measured point of lowest mid-session exit (PostHog: sim_start vs sim_completed durations) and record the change here.
+- **What counts (the commit point).** The commit point is a PRINCIPLE, not a fixed rule: it is the point in a session past which a user is least likely to exit before finishing. Crediting the streak there, rather than at full completion, rewards real engagement without making streaks feel like homework. We do not yet know that point empirically, so at launch we PROXY it with a guess: 3+ minutes of real conversation OR the first `good` hint on an objection exchange, whichever comes first. Treat this 3-min / first-objection-good rule as a placeholder for the real metric, not a decision. After launch, replace it with the measured point of lowest mid-session exit, from PostHog (compare `sim_start` vs `sim_completed` durations to find where the abandonment curve flattens), and record the change in the decisions log. A full completed session is NOT required for streak credit.
 - Scores still require a completed session. Commit point = streak credit only.
 - **Streak benefits (mechanically true, no score inflation):** 7-day streak = +1 bonus free session that month (free tier; costs us ~$0.25, buys a habit); 30-day streak = a Library scenario unlock. Both are server-granted through the same entitlement/cap machinery, never client-side.
 - Freshness nudge stays copy-only ("needs a warm-up"), never a score penalty.
@@ -98,8 +98,11 @@ Streaks measure showing up; skill scores measure selling. The two never mix: a s
 ## Decisions log
 
 - 2026-07-10: category names locked to the prototype's five (objections, discovery, closing, rapport, tonality); talk-ratio target 40-45% accepted; consistency rule reworded to "5 of last 7 in band"; streak commit-point model adopted with launch default of 3 min or first objection `good`, to be recalibrated from funnel data.
+- 2026-07-11: streak rewards CONFIRMED for v1 launch (both the 7-day +1 bonus session and the 30-day scenario unlock). Tonality acoustic analysis (pitch/energy) CONFIRMED as v1.1, transcript-derived signals only in v1. v1.1 scoped to stat-accuracy polish, including whether the background sub-signals get surfaced in the UI or deepened for the income model.
+- 2026-07-11: freshness decay CONFIRMED (21 days with no completed session → "needs a warm-up" copy, never a score penalty). Streak commit point reframed as a PRINCIPLE, the point past which a user is least likely to exit the sim; the 3-min / first-objection-`good` rule is an explicit placeholder proxy, to be replaced by the measured lowest-exit point from PostHog once there is data.
 
-## Remaining open items
+## Roadmap (was "remaining open items"; resolved 2026-07-11)
 
-1. Confirm the streak benefits are wanted at launch (+1 session at 7 days, scenario unlock at 30) or v1.1.
-2. Tonality acoustic analysis (pitch/energy) is v1.1; transcript-derived signals only in v1.
+- **v1 ships BOTH streak rewards.** 7-day streak = +1 bonus free session that month; 30-day streak = a Library scenario unlock. Both server-granted, firewalled from skill scores (see Streaks section).
+- **Tonality acoustic analysis (pitch/energy) is v1.1**, not v1. v1 judges tonality from transcript-derivable signals only (pace, fillers, pauses, word choice). Copy must not claim we "hear tone" until the audio upgrade ships. The v1.1 upgrade extracts audio features in the broker from the Deepgram STT stream and feeds them to the scoring LLM as deterministic stats (never invented by the LLM).
+- **v1.1 theme = stat accuracy.** Polish the deterministic `stats` block and decide whether the per-category background sub-signals (`score.signals.*`) are worth surfacing in the UI or deepening for the earning-potential model. Gated on real session data, not guessed pre-launch.

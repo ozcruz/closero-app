@@ -15,7 +15,8 @@ Color hintKindColor(ClosColors colors, HintKind kind) => switch (kind) {
 
 /// Coaching hint / key-moment card: neutral surface and border with a
 /// 3px colored left edge. State is the edge, the label color, nothing
-/// else; never a tinted wash.
+/// else; never a tinted wash. With [onTap] set the card is a button
+/// (Key Moments deep-link into the transcript); visuals are unchanged.
 class HintCard extends StatelessWidget {
   const HintCard({
     super.key,
@@ -24,9 +25,13 @@ class HintCard extends StatelessWidget {
     this.title,
     this.body,
     this.timestamp,
+    this.onTap,
   });
 
   final HintKind kind;
+
+  /// Makes the whole card tappable, e.g. jump to the transcript moment.
+  final VoidCallback? onTap;
 
   /// Short category label rendered small-caps in the kind color,
   /// e.g. 'Rapport' or 'Strong'.
@@ -47,7 +52,7 @@ class HintCard extends StatelessWidget {
     final sp = context.sp;
     final edge = hintKindColor(colors, kind);
 
-    return ClipRRect(
+    final card = ClipRRect(
       borderRadius: context.closRadius.cardRadius,
       child: Container(
         decoration: BoxDecoration(
@@ -122,6 +127,25 @@ class HintCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+
+    if (onTap == null) return card;
+    return Semantics(
+      button: true,
+      child: FocusableActionDetector(
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              onTap?.call();
+              return null;
+            },
+          ),
+        },
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(onTap: onTap, child: card),
         ),
       ),
     );

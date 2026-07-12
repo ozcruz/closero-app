@@ -2,6 +2,7 @@
 library;
 
 export 'avatar_stack.dart';
+export 'category_score_card.dart';
 export 'clos_badge.dart';
 export 'clos_buttons.dart';
 export 'clos_card.dart';
@@ -26,6 +27,7 @@ export 'section_header.dart';
 export 'session_row.dart';
 export 'side_nav.dart';
 export 'spark_line.dart';
+export 'stat_strip.dart';
 export 'stat_tile.dart';
 export 'streak_pill.dart';
 export 'transcript_line.dart';

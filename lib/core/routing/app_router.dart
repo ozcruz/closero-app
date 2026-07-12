@@ -18,6 +18,8 @@ import '../../features/library/presentation/library_screen.dart';
 import '../../features/methodologies/presentation/methodologies_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/progress/presentation/progress_screen.dart';
+import '../../features/scoring/presentation/score_screen.dart';
+import '../../features/scoring/presentation/transcript_screen.dart';
 import '../../features/settings/presentation/change_password_screen.dart';
 import '../../features/settings/presentation/connected_accounts_screen.dart';
 import '../../features/settings/presentation/delete_account_screen.dart';
@@ -121,26 +123,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           detail: state.pathParameters['scenarioId'],
         ),
       ),
-      // Deep-link contract, registered from day one.
+      // Post-call score + transcript. Deep-link contract from day one.
       GoRoute(
         path: ScoreRoute.path,
-        builder: (context, state) => standaloneStub(
-          'Session score',
-          detail: state.pathParameters['sessionId'],
-        ),
+        builder: (context, state) =>
+            ScoreScreen(sessionId: state.pathParameters['sessionId']!),
         routes: [
           GoRoute(
             path: ScoreTranscriptRoute.subPath,
-            builder: (context, state) {
-              final moment = state.uri.queryParameters['moment'];
-              return standaloneStub(
-                'Transcript',
-                detail: [
-                  state.pathParameters['sessionId'],
-                  if (moment != null) 'moment $moment',
-                ].join(', '),
-              );
-            },
+            builder: (context, state) => TranscriptScreen(
+              sessionId: state.pathParameters['sessionId']!,
+              moment: int.tryParse(
+                state.uri.queryParameters['moment'] ?? '',
+              ),
+            ),
           ),
         ],
       ),
