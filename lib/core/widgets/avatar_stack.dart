@@ -13,8 +13,8 @@ enum AvatarArtTint { neutral, violet, umber, moss, slate }
 /// The placeholder is the loading state AND the fallback; it is never
 /// removed from the tree, even while the Rive layer renders. This
 /// widget is only the mounting slot: loading the .riv file, resolving
-/// the LipSync state machine, holding input handles, and all
-/// lipsync/idle driving live in the session driver (see
+/// the LipSync state machine, binding AvatarVM, holding handles, and
+/// all lipsync/idle driving live in the session driver (see
 /// context/rive-contract.md). Pass the externally created
 /// [controller]; pass null (or clear it on failure) to fall back to
 /// the placeholder. Never crash on a missing rig.

@@ -24,7 +24,8 @@ import '../../features/settings/presentation/change_password_screen.dart';
 import '../../features/settings/presentation/connected_accounts_screen.dart';
 import '../../features/settings/presentation/delete_account_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
-import '../widgets/widgets.dart';
+import '../../features/sim/presentation/cold_call_screen.dart';
+import '../../features/sim/presentation/video_sim_screen.dart';
 import 'app_routes.dart';
 import 'app_shell.dart';
 import 'auth_guard.dart';
@@ -53,11 +54,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   String? from(GoRouterState state) =>
       sanitizeFrom(state.uri.queryParameters['from']);
-
-  // Screens whose build session hasn't landed yet render an honest
-  // placeholder; the routes themselves are final.
-  Widget standaloneStub(String title, {String? detail}) =>
-      ClosScaffold(body: PlaceholderScreen(title: title, detail: detail));
 
   final router = GoRouter(
     refreshListenable: refresh,
@@ -111,16 +107,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: ColdCallSimRoute.path,
-        builder: (context, state) => standaloneStub(
-          'Cold call session',
-          detail: state.pathParameters['scenarioId'],
+        builder: (context, state) => ColdCallSimScreen(
+          scenarioId: state.pathParameters['scenarioId']!,
         ),
       ),
       GoRoute(
         path: VideoSimRoute.path,
-        builder: (context, state) => standaloneStub(
-          'Video session',
-          detail: state.pathParameters['scenarioId'],
+        builder: (context, state) => VideoSimScreen(
+          scenarioId: state.pathParameters['scenarioId']!,
         ),
       ),
       // Post-call score + transcript. Deep-link contract from day one.

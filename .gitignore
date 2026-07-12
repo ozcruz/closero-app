@@ -50,3 +50,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets: real keys live in .env (never committed); .env.example
+# documents which keys exist and is committed.
+.env

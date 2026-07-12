@@ -66,14 +66,21 @@ The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/All Work July 
 ### Components and screens
 - Screens assemble `lib/core/widgets/` components; do not fork one-off variants. If a screen needs a new state, add it to the component with a golden test.
 - Rive avatars sit on a permanent gradient placeholder Stack. The placeholder is the loading state AND the fallback; it is never removed.
-- Rive rig contract (`context/rive-contract.md`) is binding. State machine name is LOCKED: `LipSync`. Input names are LOCKED and case-sensitive: `viseme` (Number, 8 mouth groups), `Blink` / `HalfBlink` / `Breath` (Triggers, independent of mouth state), plus the production idle inputs once locked there. Any replacement .riv must conform; app code never renames inputs to fit an asset.
-- Rive assets load via `StateMachineController` + SMI input handles. Never the plain `RiveAnimation.asset` widget (no input handles). Missing state machine or input = fall back to the placeholder, never crash.
+- Rive rig contract (`context/rive-contract.md`) is binding (amended 2026-07-13 to the verified rig). State machine name is LOCKED: `LipSync`. The mouth is data-binding-driven: view model `AvatarVM`, Number property `viseme` (8 mouth groups: 0 rest, 1 AA, 2 EE, 3 MM, 4 FF, 5 OO, 6 LL, 7 SS). Blinks are LOCKED lowercase inputs: `blink` (Trigger), `halfBlink` (Number hold: 1 held, 0 released). Breathing is autonomous in the rig, no input. Any replacement .riv must conform; app code never renames handles to fit an asset.
+- Rive assets load via `RiveWidgetController` + `dataBind(DataBind.auto())`, holding the `AvatarVM.viseme` property and input handles. Never the plain `RiveAnimation.asset` widget. Missing file, state machine, view model, or handle = fall back to the placeholder, never crash.
 - The Azure-viseme-ID to mouth-group mapping lives ONLY in `lib/core/services/viseme_mapping.dart`. No inline viseme maps anywhere else.
 - Viseme input updates are scheduled against audio playback position (just_audio position stream, per utterance), NEVER against event-arrival time. Blink/breath/idle run on their own timers, decoupled from the viseme stream.
 - Library: free tier = B2C library, Closer = B2B + Methodologies. Locked cards route to the upgrade screen. Methodology tags appear ONLY in the Scenario Preview Modal, never on cards. Completion = personal-best score or "Start", never a checkmark.
 - Accessibility is not optional: Semantics on every icon-only control, 44px minimum tap targets (enforced in the primitives), body copy contrast per token rules.
 - Icon signature: every custom icon has exactly ONE -60° element (gap or shear), 15x15 viewBox, 1.2-1.5 stroke, round caps, grayscale dim2→hi2 (streak flame excepted). Circles under r≈2.5 stay closed. Rings exempt (functional).
 - Wordmark/icon geometry is LOCKED. Recolor or add container chrome only; never redraw. Wordmark appears only in onboarding (hero 400px, topbar 60px). Icon (ring alone, accentDim, 18px) on no-sidebar screens. Sidebar has no logo.
+
+## Secrets and API keys
+
+- Never paste keys into chat, code, CLAUDE.md, or `.gitignore` itself. `.gitignore` only lists the FILES that hold secrets; it is committed.
+- Server-side secrets (RESEND_API_KEY, RC_WEBHOOK_SECRET) live in Google Secret Manager only: `firebase functions:secrets:set <NAME>` in closero-backend. Never on disk.
+- Local build-time keys (e.g. the PostHog key) go in `.env` (gitignored; `.env.example` documents the expected names). Reference them by name; read values from the file at build/run time.
+- Anything compiled into the web client (`--dart-define`) is readable by end users. Only publishable keys client-side; real secrets stay server-side.
 
 ## Canonical mock data (fixtures; any screen disagreeing is a bug)
 

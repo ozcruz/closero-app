@@ -272,6 +272,118 @@ class LockIcon extends StatelessWidget {
   Widget build(BuildContext context) => const _ClosIcon(_paint);
 }
 
+/// Live mic: filled capsule inside the signature gap ring (the gap is
+/// the -60 degree element), stem below. The live-call mic-on control.
+class MicIcon extends StatelessWidget {
+  const MicIcon({super.key});
+
+  static void _paint(Canvas canvas, double u, Color color) {
+    _drawGapRing(canvas, Offset(7.5 * u, 7 * u), 4.2 * u, _stroke(u, color));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(6.2 * u, 3.9 * u, 8.8 * u, 8.6 * u),
+        Radius.circular(1.3 * u),
+      ),
+      _fill(u, color),
+    );
+    canvas.drawLine(
+      Offset(7.5 * u, 11.2 * u),
+      Offset(7.5 * u, 12.6 * u),
+      _stroke(u, color, 1.2),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => const _ClosIcon(_paint);
+}
+
+/// Muted mic: capsule, stand arc, stem, and a slash laid along the -60
+/// degree signature axis (the icon's one signature element, so the
+/// stand arc stays unbroken).
+class MicOffIcon extends StatelessWidget {
+  const MicOffIcon({super.key});
+
+  static void _paint(Canvas canvas, double u, Color color) {
+    final paint = _stroke(u, color, 1.2);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(6.2 * u, 3.6 * u, 8.8 * u, 9 * u),
+        Radius.circular(1.3 * u),
+      ),
+      paint,
+    );
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(7.5 * u, 8.2 * u), radius: 3.3 * u),
+      0.35,
+      math.pi - 0.7,
+      false,
+      paint,
+    );
+    canvas.drawLine(
+      Offset(7.5 * u, 11.5 * u),
+      Offset(7.5 * u, 12.7 * u),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(5.2 * u, 11.5 * u),
+      Offset(9.8 * u, 3.5 * u),
+      _stroke(u, color, 1.4),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => const _ClosIcon(_paint);
+}
+
+/// End / power: the signature gap ring with the needle laid through
+/// the gap along the -60 degree axis (same family as SettingsIcon).
+class PowerIcon extends StatelessWidget {
+  const PowerIcon({super.key});
+
+  static void _paint(Canvas canvas, double u, Color color) {
+    _drawGapRing(
+      canvas,
+      Offset(7.5 * u, 7.9 * u),
+      4.4 * u,
+      _stroke(u, color),
+    );
+    canvas.drawLine(
+      Offset(8.6 * u, 6 * u),
+      Offset(10.3 * u, 3.1 * u),
+      _stroke(u, color, 1.4),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => const _ClosIcon(_paint);
+}
+
+/// Warning triangle, for the exit-confirm modal. The right edge breaks
+/// with the ~55 degree gap centered on the -60 degree signature axis.
+class AlertIcon extends StatelessWidget {
+  const AlertIcon({super.key});
+
+  static void _paint(Canvas canvas, double u, Color color) {
+    final paint = _stroke(u, color, 1.2);
+    final leftRun = Path()
+      ..moveTo(10.2 * u, 7.8 * u)
+      ..lineTo(12.6 * u, 12 * u)
+      ..lineTo(2.4 * u, 12 * u)
+      ..lineTo(7.5 * u, 3 * u)
+      ..lineTo(9.2 * u, 6 * u);
+    canvas.drawPath(leftRun, paint);
+    canvas.drawLine(
+      Offset(7.5 * u, 6.9 * u),
+      Offset(7.5 * u, 9.3 * u),
+      _stroke(u, color, 1.4),
+    );
+    canvas.drawCircle(Offset(7.5 * u, 10.9 * u), 0.8 * u, _fill(u, color));
+  }
+
+  @override
+  Widget build(BuildContext context) => const _ClosIcon(_paint);
+}
+
 /// The brand mark: the app icon's ring alone, for no-sidebar screens.
 /// Geometry is ported 1:1 from the locked closero-icon.svg (ellipse
 /// rx 269.76 / ry 303.40 / stroke 133.20 on a 1000 grid, sliced by a
