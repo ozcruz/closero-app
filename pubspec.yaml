@@ -44,6 +44,7 @@ flutter:
 
   assets:
     - assets/rive/avatar.riv
+    - assets/audio/lipsync_demo.wav
 
   fonts:
     - family: Figtree

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/services/feature_flags.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../scoring/domain/session_doc.dart';
 import '../application/sim_controller.dart';
 import '../domain/sim_script.dart';
 import '../domain/sim_session.dart';
+import 'avatar_rig_demo.dart';
 import 'sim_host.dart';
 import 'sim_widgets.dart';
 
@@ -85,17 +87,26 @@ class VideoSimView extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             const OfficeBackdrop(),
-            // The persona layer: permanent gradient placeholder, Rive
-            // mounts on top in Session 12.
+            // The persona layer: permanent gradient placeholder. The
+            // rig demo mounts Rive on top behind AVATAR_RIG_DEMO; the
+            // live pipeline (Session 14) mounts it for real.
             Center(
               child: SizedBox(
                 width: 420,
                 height: 540,
-                child: AvatarStack(
-                  initials: script.personaInitials,
-                  tint: script.tint,
-                  semanticLabel: '${script.personaName}, AI persona',
-                ),
+                child: kAvatarRigDemo
+                    ? AvatarRigDemoStack(
+                        initials: script.personaInitials,
+                        tint: script.tint,
+                        semanticLabel:
+                            '${script.personaName}, AI persona',
+                      )
+                    : AvatarStack(
+                        initials: script.personaInitials,
+                        tint: script.tint,
+                        semanticLabel:
+                            '${script.personaName}, AI persona',
+                      ),
               ),
             ),
             // Frosted topbar over the stage, stripe riding under it.

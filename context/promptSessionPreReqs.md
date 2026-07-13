@@ -12,6 +12,7 @@ Week 4 (pipeline accounts + launch), Part 4:
 
 
 [M] Deepgram, Azure Speech, OpenAI API keys; Cloudflare Workers paid plan ($5/mo) (item 8).
+> Note (2026-07-12): Workers paid plan is NOT needed to start the broker. SQLite-backed Durable Objects run on the free plan; the paid plan is a before-real-traffic prereq because free caps at 100k Worker requests/day. See correction below.
 [P] Cost instrumentation after first live sessions (item 9).
 [M] Cloudflare Pages project for app.closero.app, Firebase authorized domain (items 10-11).
 
@@ -65,6 +66,7 @@ Deepgram account + API key (STT).
 Azure Speech account + key (TTS with visemes).
 LLM API key (OpenAI/Anthropic).
 Cloudflare Workers PAID plan ($5/mo — Durable Objects require it).
+> Correction (2026-07-12): Durable Objects do NOT require the paid plan. SQLite-backed DOs run on the Workers FREE plan (5 GB storage, no SQLite-storage charge on free); legacy KV-backed DOs (the ones that needed paid) can't be created in new namespaces after 2026-07-09, so build the broker on SQLite-backed DOs (sql.exec, not state.storage.get/put). Develop/test entirely on free. Still take the $5/mo plan before real traffic, but the reason is the free cap of 100k Worker requests/day, which a live voice sim burns through fast. Not a Session-13 blocker.
 (Part 4, item 8)
 
 

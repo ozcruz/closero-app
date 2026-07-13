@@ -84,7 +84,7 @@ class _ProbeScreenState extends State<_ProbeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF141210),
+      backgroundColor: Colors.black,
       body: Row(
         children: [
           Expanded(
