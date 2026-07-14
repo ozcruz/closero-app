@@ -37,9 +37,9 @@ class _FakeConn implements BrokerConnection {
     await _frames.close();
   }
 
-  Map<String, dynamic> lastJson(String type) => (sentText
+  Map<String, dynamic> lastJson(String type) => sentText
       .map((t) => jsonDecode(t) as Map<String, dynamic>)
-      .lastWhere((m) => m['type'] == type));
+      .lastWhere((m) => m['type'] == type);
 
   bool sent(String type) =>
       sentText.any((t) => (jsonDecode(t) as Map)['type'] == type);
@@ -314,7 +314,7 @@ void main() {
       () async {
     // Flag off: sustained speech over playback does NOT interrupt.
     final off = _build();
-    await _startReady(off, interrupt: false);
+    await _startReady(off);
     off.player.playingValue =
         const PlaybackPosition(utteranceId: 1, positionMs: 200);
     for (var i = 0; i < 10; i++) {

@@ -140,7 +140,7 @@ void main() {
           {'visemeId': 2, 'offsetMs': 0},
           {'visemeId': 21, 'offsetMs': 120},
         ],
-      })) as VisemeMessage;
+      }))! as VisemeMessage;
       expect(msg.utteranceId, 4);
       expect(msg.events, hasLength(2));
       expect(msg.events[1].visemeId, 21);

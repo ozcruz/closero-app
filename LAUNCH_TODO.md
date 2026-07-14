@@ -28,6 +28,31 @@ Session 14+ prompts. Grouped by when it actually bites. Last reviewed 2026-07-13
       traffic. The broker relies on Durable Objects; free plan is fine for own testing
       only. (broker-worker-setup)
 
+## Analytics (PostHog, Session 15)
+
+- [x] **Create the PostHog account + project.** (Done 2026-07-14.) US cloud, org "Closero",
+      project "Default project" (id 509099). Project API key (publishable, safe in the bundle):
+      `phc_DkzgF5jDvacTUAnT7xPvB47sbYdBPkfTWP5hXvPqSPcs`. Consider renaming the project to
+      "Closero app" in PostHog settings.
+- [x] **Build the activation funnel + dashboard.** (Done 2026-07-14 via the PostHog MCP.)
+      Funnel "Activation → Purchase" (`https://us.posthog.com/project/509099/insights/jYz1ZHrN`)
+      on the pinned "Closero — Launch metrics" dashboard
+      (`https://us.posthog.com/project/509099/dashboard/1848034`). Both are EMPTY until a build
+      ships with the key set (below). Note: the funnel includes `cap_hit` as a step, so it
+      measures the cap-driven upgrade path specifically; a large drop at `cap_hit` is expected.
+- [ ] **Pass the key on every PRODUCTION build.** Analytics stays dark (the no-op service,
+      zero events) unless the web bundle is compiled with
+      `--dart-define=POSTHOG_API_KEY=phc_...`. Unlike `RC_PURCHASE_LINK`, there is NO baked-in
+      default, on purpose (a key does not belong in source). The production build command
+      lives in the app's Cloudflare Pages project, which does NOT exist yet (same separate
+      Pages project as the auth-domain note above, lines 16-23; created at the Session 17
+      deploy step) -- so wait until then to wire it. Cleaner form: store the key as a Pages
+      env var and use `--dart-define=POSTHOG_API_KEY=$POSTHOG_API_KEY`. Local test builds need
+      the same flag on your own `flutter build web` / `flutter run`.
+- [ ] **Add PostHog to the Privacy policy vendor / sub-processor list** before public launch.
+      It processes product-usage events keyed by the Firebase uid (no email, name, or
+      transcript content). Part of the attorney ToS/Privacy pass. (launch gate)
+
 ## Hard calendar deadline
 
 - [ ] **Node 20 runtime decommissioned 2026-10-30.** Upgrade both Cloud Functions groups
