@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/analytics_events.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/application/auth_providers.dart';
@@ -175,7 +176,7 @@ class _LibraryBody extends ConsumerWidget {
                   variant: SectionHeaderVariant.label,
                 ),
                 SizedBox(height: sp.sp4),
-                _ScenarioGrid(scenarios: pickUp, locked: locked),
+                _ScenarioGrid(scenarios: pickUp, locked: locked, ref: ref),
                 SizedBox(height: sp.sectionGap),
               ],
               if (fresh.isNotEmpty) ...[
@@ -184,7 +185,7 @@ class _LibraryBody extends ConsumerWidget {
                   variant: SectionHeaderVariant.label,
                 ),
                 SizedBox(height: sp.sp4),
-                _ScenarioGrid(scenarios: fresh, locked: locked),
+                _ScenarioGrid(scenarios: fresh, locked: locked, ref: ref),
               ],
             ],
           ),
@@ -197,10 +198,18 @@ class _LibraryBody extends ConsumerWidget {
 /// Responsive character-select grid. Locked cards route to the upgrade
 /// screen; unlocked cards open the shared Scenario Preview modal.
 class _ScenarioGrid extends StatelessWidget {
-  const _ScenarioGrid({required this.scenarios, required this.locked});
+  const _ScenarioGrid({
+    required this.scenarios,
+    required this.locked,
+    required this.ref,
+  });
 
   final List<Scenario> scenarios;
   final bool locked;
+
+  /// The screen's ref, used only synchronously in card onTap to fire the
+  /// preview event / read analytics. Valid while the screen is mounted.
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -253,9 +262,9 @@ class _ScenarioGrid extends StatelessWidget {
       bestScore: scenario.bestScore,
       onTap: () {
         if (locked) {
-          const UpgradeRoute().go(context);
+          const UpgradeRoute(source: UpgradeSource.lockedCard).go(context);
         } else {
-          showScenarioPreviewModal(context, scenario: scenario);
+          showScenarioPreviewModal(context, ref: ref, scenario: scenario);
         }
       },
     );

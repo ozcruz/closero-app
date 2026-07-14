@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../domain/user_doc.dart';
 
@@ -15,6 +16,7 @@ final authServiceProvider = Provider<AuthService>(
   (ref) => AuthService(
     ref.watch(firebaseAuthProvider),
     ref.watch(firestoreProvider),
+    ref.watch(analyticsServiceProvider),
   ),
 );
 

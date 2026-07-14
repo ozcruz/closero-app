@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/analytics_events.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../domain/scenario.dart';
@@ -8,11 +11,17 @@ import '../domain/scenario.dart';
 /// Opens the shared Scenario Preview modal
 /// (context/prototype-screens/22-scenario-preview.png). Launched from
 /// the Library grid and the Dashboard hero, always with a [Scenario]
-/// from the one shared catalog.
+/// from the one shared catalog. The single choke point for
+/// scenario_preview_opened, so [ref] is required by every caller.
 Future<void> showScenarioPreviewModal(
   BuildContext context, {
+  required WidgetRef ref,
   required Scenario scenario,
 }) {
+  ref.read(analyticsServiceProvider).capture(
+    AnalyticsEvents.scenarioPreviewOpened,
+    properties: {AnalyticsProps.scenarioId: scenario.id},
+  );
   return showClosModal<void>(
     context,
     builder: (context) => ScenarioPreviewModal(scenario: scenario),

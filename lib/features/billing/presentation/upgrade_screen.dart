@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/analytics_events.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/application/auth_providers.dart';
@@ -20,7 +22,11 @@ import 'billing_shell.dart';
 /// the webhook flips users/{uid}.entitlement, the entitlement watch
 /// below sees the flip and moves to the success screen.
 class UpgradeScreen extends ConsumerStatefulWidget {
-  const UpgradeScreen({super.key});
+  const UpgradeScreen({super.key, this.source});
+
+  /// Which entry point routed here ([UpgradeSource]); null for a direct
+  /// visit. Reported as upgrade_screen_viewed's `source`.
+  final String? source;
 
   @override
   ConsumerState<UpgradeScreen> createState() => _UpgradeScreenState();
@@ -31,6 +37,15 @@ class _UpgradeScreenState extends ConsumerState<UpgradeScreen> {
   String? _error;
   bool _checkoutOpened = false;
 
+  @override
+  void initState() {
+    super.initState();
+    ref.read(analyticsServiceProvider).capture(
+      AnalyticsEvents.upgradeScreenViewed,
+      properties: {AnalyticsProps.source: widget.source ?? UpgradeSource.direct},
+    );
+  }
+
   void _close(BuildContext context) {
     if (context.canPop()) {
       context.pop();
@@ -40,6 +55,10 @@ class _UpgradeScreenState extends ConsumerState<UpgradeScreen> {
   }
 
   Future<void> _startCheckout() async {
+    ref.read(analyticsServiceProvider).capture(
+      AnalyticsEvents.upgradeCtaClicked,
+      properties: {AnalyticsProps.source: widget.source ?? UpgradeSource.direct},
+    );
     final uid = ref.read(authStateProvider).value?.uid;
     final email = ref.read(currentUserEmailProvider);
     final billing = ref.read(billingServiceProvider);

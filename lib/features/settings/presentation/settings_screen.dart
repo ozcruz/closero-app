@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/analytics_events.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
@@ -376,6 +378,9 @@ class _PlanBillingCardState extends ConsumerState<_PlanBillingCard> {
   String? _notice;
 
   Future<void> _manageBilling() async {
+    ref.read(analyticsServiceProvider).capture(
+      AnalyticsEvents.manageBillingClicked,
+    );
     final billing = ref.read(billingServiceProvider);
     final uid = ref.read(authStateProvider).value?.uid;
     if (uid == null) return;
@@ -440,7 +445,9 @@ class _PlanBillingCardState extends ConsumerState<_PlanBillingCard> {
                 PrimaryButton(
                   label: 'Upgrade to Closer',
                   size: ClosButtonSize.medium,
-                  onPressed: () => const UpgradeRoute().go(context),
+                  onPressed: () =>
+                      const UpgradeRoute(source: UpgradeSource.settings)
+                          .go(context),
                 ),
             ],
           ),

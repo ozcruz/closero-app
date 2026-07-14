@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/analytics_events.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/application/auth_providers.dart';
@@ -136,7 +137,8 @@ class SessionLimitScreen extends ConsumerWidget {
           PrimaryButton(
             label: 'Upgrade to Closer',
             expand: true,
-            onPressed: () => const UpgradeRoute().go(context),
+            onPressed: () =>
+                const UpgradeRoute(source: UpgradeSource.cap).go(context),
           ),
           SizedBox(height: sp.sp3),
           GhostButton(

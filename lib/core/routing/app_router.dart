@@ -95,7 +95,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // brand-ring topbar, no sidebar.
       GoRoute(
         path: UpgradeRoute.path,
-        builder: (context, state) => const UpgradeScreen(),
+        builder: (context, state) => UpgradeScreen(
+          source: state.uri.queryParameters['source'],
+        ),
       ),
       GoRoute(
         path: SessionLimitRoute.path,

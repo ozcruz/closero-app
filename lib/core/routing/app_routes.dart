@@ -222,12 +222,20 @@ class SettingsDeleteRoute extends AppRoute {
 }
 
 class UpgradeRoute extends AppRoute {
-  const UpgradeRoute();
+  const UpgradeRoute({this.source});
 
   static const path = '/upgrade';
 
+  /// Where the user came from ('cap' | 'locked_card' | 'settings', the
+  /// [UpgradeSource] values). Surfaces as the upgrade_screen_viewed
+  /// `source` property; null for a direct visit.
+  final String? source;
+
   @override
-  String get location => path;
+  String get location {
+    final q = _query({'source': source});
+    return q == null ? path : '$path?$q';
+  }
 }
 
 class SessionLimitRoute extends AppRoute {

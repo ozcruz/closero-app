@@ -203,7 +203,7 @@ class _HeroCard extends ConsumerWidget {
     final resolved =
         await ref.read(scenarioRepositoryProvider).byId(scenario.id);
     if (resolved == null || !context.mounted) return;
-    await showScenarioPreviewModal(context, scenario: resolved);
+    await showScenarioPreviewModal(context, ref: ref, scenario: resolved);
   }
 
   @override

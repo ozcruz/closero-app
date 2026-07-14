@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/analytics_events.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../data/session_repository.dart';
@@ -30,6 +32,25 @@ class ScoreScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Fire score_viewed once, when a scored (non-aborted) session
+    // resolves. Deep-link revisits re-fire; aborted sessions never do
+    // (no score, no fake band). The band rides here because the score is
+    // server-written and only known once the doc loads.
+    ref.listen(sessionViewProvider(sessionId), (previous, next) {
+      final view = next.value;
+      if (view == null) return;
+      final doc = view.doc;
+      if (doc.status == SessionStatus.aborted || doc.score == null) return;
+      ref.read(analyticsServiceProvider).capture(
+        AnalyticsEvents.scoreViewed,
+        properties: {
+          AnalyticsProps.sessionId: sessionId,
+          AnalyticsProps.simType: doc.simType.schemaValue,
+          AnalyticsProps.scoreBand: scoreBandLabel(doc.score!.total),
+        },
+      );
+    });
+
     final view = ref.watch(sessionViewProvider(sessionId));
 
     return view.when(

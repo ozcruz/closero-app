@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/analytics_events.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../core/services/feature_flags.dart';
+import '../../auth/application/auth_providers.dart';
 import '../../scoring/domain/session_doc.dart';
 import '../application/sim_controller.dart';
 import '../data/scripted_sim_session.dart';
@@ -48,6 +51,10 @@ class _SimHostState extends ConsumerState<SimHost> {
   late final SimController _controller;
   bool _routedAway = false;
 
+  /// Last phase an analytics event fired for, so each lifecycle event
+  /// fires once per transition rather than on every notifyListeners.
+  SimPhase? _lastPhase;
+
   @override
   void initState() {
     super.initState();
@@ -71,8 +78,14 @@ class _SimHostState extends ConsumerState<SimHost> {
   }
 
   void _onControllerChanged() {
-    if (!mounted || _routedAway) return;
-    switch (_controller.phase) {
+    if (!mounted) return;
+    final phase = _controller.phase;
+    if (phase != _lastPhase) {
+      _lastPhase = phase;
+      _fireAnalyticsFor(phase);
+    }
+    if (_routedAway) return;
+    switch (phase) {
       case SimPhase.capBlocked:
         _routedAway = true;
         const SessionLimitRoute().go(context);
@@ -80,6 +93,44 @@ class _SimHostState extends ConsumerState<SimHost> {
         _routedAway = true;
         ScoreRoute(sessionId: _controller.result!.sessionId).go(context);
       default:
+        break;
+    }
+  }
+
+  /// One lifecycle event per phase transition. sim_start carries the
+  /// tier; sim_completed carries the call duration (the score is
+  /// server-written and not known yet, so its band rides score_viewed).
+  /// sim_aborted here is the start-failure path; richer mid-call abort
+  /// reasons arrive with the Session 16 abort/refund flow.
+  void _fireAnalyticsFor(SimPhase phase) {
+    final analytics = ref.read(analyticsServiceProvider);
+    switch (phase) {
+      case SimPhase.live:
+        analytics.capture(AnalyticsEvents.simStart, properties: {
+          AnalyticsProps.scenarioId: widget.scenarioId,
+          AnalyticsProps.simType: widget.simType.schemaValue,
+          AnalyticsProps.tier: ref.read(entitlementProvider).name,
+        });
+      case SimPhase.capBlocked:
+        analytics.capture(AnalyticsEvents.capHit, properties: {
+          AnalyticsProps.scenarioId: widget.scenarioId,
+          AnalyticsProps.simType: widget.simType.schemaValue,
+        });
+      case SimPhase.ended:
+        analytics.capture(AnalyticsEvents.simCompleted, properties: {
+          AnalyticsProps.scenarioId: widget.scenarioId,
+          AnalyticsProps.simType: widget.simType.schemaValue,
+          AnalyticsProps.durationSec: _controller.elapsedSec,
+          AnalyticsProps.sessionId: _controller.result!.sessionId,
+        });
+      case SimPhase.startFailed:
+        analytics.capture(AnalyticsEvents.simAborted, properties: {
+          AnalyticsProps.scenarioId: widget.scenarioId,
+          AnalyticsProps.simType: widget.simType.schemaValue,
+          AnalyticsProps.reason: 'start_failed',
+        });
+      case SimPhase.requesting:
+      case SimPhase.ending:
         break;
     }
   }

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/analytics_events.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
@@ -66,6 +68,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     setState(() => _step = step);
   }
 
+  /// Fires onboarding_step for a forward arrival at [step]. Back links
+  /// use [_goTo] directly and are not tracked. step_name is the enum
+  /// member name (e.g. 'track'), never the user's typed name.
+  void _trackStep(OnboardingStep step) {
+    ref.read(analyticsServiceProvider).capture(
+      AnalyticsEvents.onboardingStep,
+      properties: {
+        AnalyticsProps.stepIndex: step.index,
+        AnalyticsProps.stepName: step.name,
+      },
+    );
+  }
+
   /// Records the answer, holds the highlight, then advances.
   void _select<T>(T value, void Function(T) assign, OnboardingStep next) {
     _holdTimer?.cancel();
@@ -75,6 +90,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (next == OnboardingStep.reveal) {
         _finish();
       } else {
+        _trackStep(next);
         _goTo(next);
       }
     });
@@ -92,7 +108,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     });
     try {
       await ref.read(authServiceProvider).updateDisplayName(name);
-      if (mounted) _goTo(OnboardingStep.track);
+      if (mounted) {
+        _trackStep(OnboardingStep.track);
+        _goTo(OnboardingStep.track);
+      }
     } on Object catch (e) {
       if (mounted) setState(() => _nameError = authErrorMessage(e));
     } finally {
@@ -114,6 +133,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       focus: focus,
     );
     final recommended = recommendScenario(answers);
+    ref.read(analyticsServiceProvider).capture(
+      AnalyticsEvents.onboardingCompleted,
+    );
     // Best effort: a failed prefs write must not strand the user here.
     unawaited(
       ref.read(onboardingStoreProvider).saveResult(
@@ -161,7 +183,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return switch (_step) {
       OnboardingStep.welcome => _WelcomeStep(
           key: const ValueKey(OnboardingStep.welcome),
-          onStart: () => _goTo(OnboardingStep.name),
+          onStart: () {
+            _trackStep(OnboardingStep.name);
+            _goTo(OnboardingStep.name);
+          },
         ),
       OnboardingStep.name => _StepFrame(
           key: const ValueKey(OnboardingStep.name),

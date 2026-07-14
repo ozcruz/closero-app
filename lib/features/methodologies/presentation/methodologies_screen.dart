@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/analytics_events.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/application/auth_providers.dart';
@@ -176,7 +177,9 @@ class _UpgradeGate extends StatelessWidget {
           final cta = GhostButton(
             label: 'Upgrade',
             size: ClosButtonSize.medium,
-            onPressed: () => const UpgradeRoute().go(context),
+            onPressed: () =>
+                const UpgradeRoute(source: UpgradeSource.lockedCard)
+                    .go(context),
           );
 
           if (narrow) {

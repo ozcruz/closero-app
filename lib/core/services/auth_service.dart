@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import 'analytics_events.dart';
+import 'analytics_service.dart';
+
 /// Authentication for the app origin (app.closero.app owns auth; the
 /// marketing site only links here, see context/hosting-and-auth.md).
 ///
@@ -21,10 +24,14 @@ class LinkedProvider {
 }
 
 class AuthService {
-  AuthService(this._auth, this._firestore);
+  AuthService(this._auth, this._firestore, this._analytics);
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+
+  /// Private so `implements AuthService` fakes don't have to provide it;
+  /// only the real service fires signup_completed.
+  final AnalyticsService _analytics;
 
   /// Emits on sign-in/out and on user reloads, so the router guard also
   /// reacts to emailVerified flipping.
@@ -219,6 +226,7 @@ class AuthService {
     try {
       final ref = _firestore.collection('users').doc(user.uid);
       final snap = await ref.get();
+      // Doc already exists: a returning sign-in, not a signup.
       if (snap.exists) return;
       await ref.set({
         'email': user.email,
@@ -231,6 +239,16 @@ class AuthService {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      // First-ever doc create is the single new-vs-returning choke point,
+      // so signup_completed fires here (once) for email and SSO alike.
+      _analytics.capture(
+        AnalyticsEvents.signupCompleted,
+        properties: {
+          AnalyticsProps.method: SignupMethod.fromProviderIds(
+            user.providerData.map((p) => p.providerId),
+          ),
+        },
+      );
     } on Object catch (e) {
       debugPrint('ensureUserDoc failed: $e');
     }
