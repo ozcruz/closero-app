@@ -41,12 +41,19 @@ class CallableSimGate implements SimGate {
   }
 }
 
-/// Opaque idempotency key for one start attempt, within the callable's
-/// `[A-Za-z0-9_-]{1,128}` charset.
+/// Idempotency key for one start attempt AND the address of the live
+/// session. A UUIDv4 (secure random): the broker addresses the Durable
+/// Object and sessions/{id} by it and enforces length >= 20, so its
+/// entropy is the guessing protection. Passed to startSimSession and,
+/// unchanged, to the broker's WSS URL + hello.
 String newSimRequestId() {
-  final now = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
-  final salt = Random().nextInt(1 << 30).toRadixString(36);
-  return 'sim_$now$salt';
+  final rng = Random.secure();
+  final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
+  String hex(int start, int end) =>
+      bytes.sublist(start, end).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  return '${hex(0, 4)}-${hex(4, 6)}-${hex(6, 8)}-${hex(8, 10)}-${hex(10, 16)}';
 }
 
 final simGateProvider = Provider<SimGate>((ref) => CallableSimGate());

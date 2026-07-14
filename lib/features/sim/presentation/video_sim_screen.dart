@@ -8,6 +8,7 @@ import '../application/sim_controller.dart';
 import '../domain/sim_script.dart';
 import '../domain/sim_session.dart';
 import 'avatar_rig_demo.dart';
+import 'live_avatar_stack.dart';
 import 'sim_host.dart';
 import 'sim_widgets.dart';
 
@@ -27,6 +28,8 @@ class VideoSimScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClosScaffold(
       body: SimHost(
+        scenarioId: scenarioId,
+        simType: SimType.video,
         script: videoSimScript,
         builder: (context, controller, onEndCall) => VideoSimView(
           script: videoSimScript,
@@ -37,6 +40,7 @@ class VideoSimScreen extends StatelessWidget {
           hints: controller.hints,
           transcript: controller.transcript,
           goodCount: controller.goodCount,
+          visemeGroups: controller.visemeGroups,
           onToggleMuted: controller.toggleMuted,
           onEndCall:
               controller.phase == SimPhase.live ? onEndCall : null,
@@ -61,6 +65,7 @@ class VideoSimView extends StatelessWidget {
     required this.goodCount,
     required this.onToggleMuted,
     required this.onEndCall,
+    this.visemeGroups,
   });
 
   final SimScript script;
@@ -73,6 +78,11 @@ class VideoSimView extends StatelessWidget {
   final int goodCount;
   final VoidCallback onToggleMuted;
   final VoidCallback? onEndCall;
+
+  /// Live persona mouth-group stream; null on the scripted path (the
+  /// avatar then stays on its gradient placeholder, or the demo rig
+  /// under AVATAR_RIG_DEMO).
+  final Stream<int>? visemeGroups;
 
   @override
   Widget build(BuildContext context) {
@@ -88,25 +98,31 @@ class VideoSimView extends StatelessWidget {
           children: [
             const OfficeBackdrop(),
             // The persona layer: permanent gradient placeholder. The
-            // rig demo mounts Rive on top behind AVATAR_RIG_DEMO; the
-            // live pipeline (Session 14) mounts it for real.
+            // live pipeline drives the rig from the broker's visemes;
+            // AVATAR_RIG_DEMO loops the canned test clip; otherwise the
+            // scripted path shows the placeholder.
             Center(
               child: SizedBox(
                 width: 420,
                 height: 540,
-                child: kAvatarRigDemo
-                    ? AvatarRigDemoStack(
-                        initials: script.personaInitials,
-                        tint: script.tint,
-                        semanticLabel:
-                            '${script.personaName}, AI persona',
-                      )
-                    : AvatarStack(
-                        initials: script.personaInitials,
-                        tint: script.tint,
-                        semanticLabel:
-                            '${script.personaName}, AI persona',
-                      ),
+                child: switch ((visemeGroups, kAvatarRigDemo)) {
+                  (final Stream<int> groups, _) => LiveAvatarStack(
+                      visemeGroups: groups,
+                      initials: script.personaInitials,
+                      tint: script.tint,
+                      semanticLabel: '${script.personaName}, AI persona',
+                    ),
+                  (null, true) => AvatarRigDemoStack(
+                      initials: script.personaInitials,
+                      tint: script.tint,
+                      semanticLabel: '${script.personaName}, AI persona',
+                    ),
+                  (null, false) => AvatarStack(
+                      initials: script.personaInitials,
+                      tint: script.tint,
+                      semanticLabel: '${script.personaName}, AI persona',
+                    ),
+                },
               ),
             ),
             // Frosted topbar over the stage, stripe riding under it.

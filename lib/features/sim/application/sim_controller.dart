@@ -1,12 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../scoring/domain/session_doc.dart';
-import '../data/scripted_sim_session.dart';
+import '../data/live_sim_session.dart';
 import '../data/sim_gate.dart';
-import '../domain/sim_script.dart';
 import '../domain/sim_session.dart';
 
 /// Lifecycle of a sim screen.
@@ -37,7 +35,10 @@ class SimController extends ChangeNotifier {
   SimController({required this.gate, required this.createSession});
 
   final SimGate gate;
-  final SimSession Function() createSession;
+
+  /// Builds the session for one attempt. The [requestId] is the same id
+  /// passed to the gate, so a live session addresses the broker with it.
+  final SimSession Function(String requestId) createSession;
 
   SimSession? _session;
   final List<StreamSubscription<dynamic>> _subs = [];
@@ -53,6 +54,10 @@ class SimController extends ChangeNotifier {
   bool repSpeaking = false;
   bool muted = false;
 
+  /// Mapped mouth-group values from a live session, for the Video Sim's
+  /// Rive avatar to consume; null on the scripted path.
+  Stream<int>? visemeGroups;
+
   /// The finished session's pointer, set when [phase] is ended.
   SimResult? result;
 
@@ -63,8 +68,9 @@ class SimController extends ChangeNotifier {
 
   Future<void> start() async {
     final SimGateResult gateResult;
+    final requestId = newSimRequestId();
     try {
-      gateResult = await gate.requestStart(requestId: newSimRequestId());
+      gateResult = await gate.requestStart(requestId: requestId);
     } on Exception {
       _set(() => phase = SimPhase.startFailed);
       return;
@@ -75,8 +81,19 @@ class SimController extends ChangeNotifier {
       return;
     }
 
-    final session = createSession();
+    final session = createSession(requestId);
     _session = session;
+    if (session is VisemeStreaming) {
+      visemeGroups = (session as VisemeStreaming).visemeGroups;
+    }
+    if (session is ServerEndableSession) {
+      // The broker can end the call itself (time cap); route on its
+      // scored result. onError guards against an unhandled async error
+      // when the call drops without a score (Session 16 abort UX).
+      unawaited((session as ServerEndableSession)
+          .ended
+          .then(_onServerEnded, onError: _onSessionError));
+    }
     _subs.add(session.transcript.listen((u) {
       _set(() => transcript.add(u));
     }));
@@ -102,7 +119,16 @@ class SimController extends ChangeNotifier {
         _set(() => repSpeaking = speaking);
       }
     }));
-    await session.start();
+    try {
+      await session.start();
+    } on Object {
+      // Mic denied, socket refused, or hello rejected: nothing to score.
+      // Session 16 owns the refund + honest copy split; here we surface
+      // the honest start-failure state.
+      if (_disposed) return;
+      _set(() => phase = SimPhase.startFailed);
+      return;
+    }
     if (_disposed) return;
     _clock = Timer.periodic(const Duration(seconds: 1), (_) {
       _set(() => elapsedSec++);
@@ -116,19 +142,47 @@ class SimController extends ChangeNotifier {
     await start();
   }
 
-  void toggleMuted() => _set(() => muted = !muted);
+  void toggleMuted() {
+    _set(() => muted = !muted);
+    _session?.setMuted(muted: muted);
+  }
 
   /// Normal hang-up: still counts as a session, still gets scored.
   Future<void> endSession() async {
     final session = _session;
-    if (session == null || phase == SimPhase.ending) return;
+    if (session == null || phase != SimPhase.live) return;
     _set(() => phase = SimPhase.ending);
-    final ended = await session.end(reason: 'user_hangup');
+    final SimResult ended;
+    try {
+      ended = await session.end(reason: 'user_hangup');
+    } on Object catch (e) {
+      // The score never arrived (socket dropped mid-hang-up). Keep the
+      // last live frame rather than a fake score; Session 16 abort UX.
+      debugPrint('endSession failed before scoring: $e');
+      return;
+    }
     _clock?.cancel();
     _set(() {
       result = ended;
       phase = SimPhase.ended;
     });
+  }
+
+  /// The broker ended and scored the call on its own initiative (time
+  /// cap). The user-hang-up path owns the transition when it is running.
+  void _onServerEnded(SimResult ended) {
+    if (_disposed || phase != SimPhase.live) return;
+    _clock?.cancel();
+    _set(() {
+      result = ended;
+      phase = SimPhase.ended;
+    });
+  }
+
+  void _onSessionError(Object error) {
+    // Unexpected end without a score. Avoids an unhandled async error;
+    // the aborted-call UX + abortSimSession refund is Session 16.
+    debugPrint('sim session ended without a score: $error');
   }
 
   void _set(VoidCallback mutate) {
@@ -148,12 +202,3 @@ class SimController extends ChangeNotifier {
     super.dispose();
   }
 }
-
-/// Builds the controller for a sim type. The scripted scripts are the
-/// Session 11 stand-in; LiveSimSession replaces the factory in
-/// Session 14.
-SimController buildSimController(Ref ref, {required SimScript script}) =>
-    SimController(
-      gate: ref.read(simGateProvider),
-      createSession: () => ScriptedSimSession(script),
-    );

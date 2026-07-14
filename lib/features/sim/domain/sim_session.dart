@@ -63,6 +63,11 @@ abstract interface class SimSession {
   /// Persona voice envelope, 0 to 1. Zero while the persona is silent.
   Stream<double> get outputLevel;
 
+  /// Mute or unmute the rep's mic. On the live pipeline muting stops
+  /// transmitting audio to the broker (privacy, and honest with the
+  /// mic-off control); on the scripted stand-in it is a no-op.
+  void setMuted({required bool muted});
+
   /// Ends the call and resolves the session result. [reason] follows
   /// the backend allowlist vocabulary ('user_hangup' for a normal
   /// hang-up; failure reasons are Session 16's abort path).

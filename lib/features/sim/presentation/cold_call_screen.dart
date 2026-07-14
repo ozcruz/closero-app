@@ -25,6 +25,8 @@ class ColdCallSimScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClosScaffold(
       body: SimHost(
+        scenarioId: scenarioId,
+        simType: SimType.coldCall,
         script: coldCallScript,
         builder: (context, controller, onEndCall) => ColdCallView(
           script: coldCallScript,

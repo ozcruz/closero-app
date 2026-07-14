@@ -28,6 +28,7 @@ class _FakeSession implements SimSession {
   final outputCtrl = StreamController<double>.broadcast();
   bool started = false;
   bool disposed = false;
+  bool? mutedState;
   String? endReason;
 
   @override
@@ -41,6 +42,9 @@ class _FakeSession implements SimSession {
 
   @override
   Future<void> start() async => started = true;
+
+  @override
+  void setMuted({required bool muted}) => mutedState = muted;
 
   @override
   Future<SimResult> end({required String reason}) async {
@@ -66,7 +70,7 @@ void main() {
       var built = 0;
       final controller = SimController(
         gate: _FakeGate([SimGateResult.capReached]),
-        createSession: () {
+        createSession: (_) {
           built++;
           return _FakeSession();
         },
@@ -84,7 +88,7 @@ void main() {
       final gate = _FakeGate([]);
       final controller = SimController(
         gate: gate,
-        createSession: _FakeSession.new,
+        createSession: (_) => _FakeSession(),
       );
       controller.start();
       async.flushMicrotasks();
@@ -106,7 +110,7 @@ void main() {
       final session = _FakeSession();
       final controller = SimController(
         gate: _FakeGate([SimGateResult.allowed]),
-        createSession: () => session,
+        createSession: (_) => session,
       );
       controller.start();
       async.flushMicrotasks();

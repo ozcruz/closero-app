@@ -2,19 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/services/feature_flags.dart';
+import '../../scoring/domain/session_doc.dart';
 import '../application/sim_controller.dart';
 import '../data/scripted_sim_session.dart';
 import '../data/sim_gate.dart';
+import '../data/sim_session_factory.dart';
 import '../domain/sim_script.dart';
+import '../domain/sim_session.dart';
 import 'sim_widgets.dart';
 
 /// Shared lifecycle for both sim screens: builds the controller for a
 /// script, runs the gate on mount, routes cap hits to Session limit
 /// and finished sessions to the post-call score, and hosts the exit
 /// confirm. The [builder] renders the live layout.
+///
+/// The session is live or scripted per [scenarioId]
+/// ([liveScenarioEnabled]), so personas roll onto the broker one at a
+/// time; the screens are identical either way (Session 11 contract).
 class SimHost extends ConsumerStatefulWidget {
-  const SimHost({super.key, required this.script, required this.builder});
+  const SimHost({
+    super.key,
+    required this.scenarioId,
+    required this.simType,
+    required this.script,
+    required this.builder,
+  });
 
+  final String scenarioId;
+  final SimType simType;
   final SimScript script;
 
   /// Renders the live phase. [onEndCall] opens the exit confirm.
@@ -37,10 +53,21 @@ class _SimHostState extends ConsumerState<SimHost> {
     super.initState();
     _controller = SimController(
       gate: ref.read(simGateProvider),
-      createSession: () => ScriptedSimSession(widget.script),
+      createSession: _buildSession,
     );
     _controller.addListener(_onControllerChanged);
     _controller.start();
+  }
+
+  SimSession _buildSession(String requestId) {
+    if (liveScenarioEnabled(widget.scenarioId)) {
+      return ref.read(liveSessionBuilderProvider)(
+        requestId: requestId,
+        scenarioId: widget.scenarioId,
+        simType: widget.simType,
+      );
+    }
+    return ScriptedSimSession(widget.script);
   }
 
   void _onControllerChanged() {

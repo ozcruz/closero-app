@@ -90,6 +90,11 @@ class ScriptedSimSession implements SimSession {
       active ? 0.675 + 0.325 * math.sin(_tick * 1.1) : 0.0;
 
   @override
+  void setMuted({required bool muted}) {
+    // No real mic to gate; the canned envelope is unaffected.
+  }
+
+  @override
   Future<SimResult> end({required String reason}) async {
     await dispose();
     return SimResult(sessionId: script.resultSessionId);
