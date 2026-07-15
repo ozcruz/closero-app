@@ -47,28 +47,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             // The fixture load resolves within a frame; no skeleton
             // flash.
             loading: () => const SizedBox.shrink(),
-            error: (error, stackTrace) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Your progress could not load.',
-                    style: context.closType.headlineSmall,
-                  ),
-                  SizedBox(height: context.sp.sp3),
-                  Text(
-                    'Check your connection and try again.',
-                    style: context.closType.bodyMedium,
-                  ),
-                  SizedBox(height: context.sp.sp6),
-                  GhostButton(
-                    label: 'Try again',
-                    size: ClosButtonSize.medium,
-                    onPressed: () =>
-                        ref.invalidate(progressDataProvider(_range)),
-                  ),
-                ],
-              ),
+            error: (error, stackTrace) => DataLoadError(
+              title: 'Your progress could not load.',
+              onRetry: () => ref.invalidate(progressDataProvider(_range)),
             ),
             data: (data) => data.totalSessions == 0
                 ? const _EmptyProgress()

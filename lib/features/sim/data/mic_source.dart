@@ -10,7 +10,9 @@ import 'dart:typed_data';
 
 import 'package:record/record.dart';
 
+import '../../../core/services/feature_flags.dart' show kMicInputRateHz;
 import 'broker_protocol.dart' show kBrokerMicSampleRateHz;
+import 'pcm_resample.dart';
 
 /// A live-or-fake mic. [start] resolves to the PCM chunk stream.
 abstract interface class MicSource {
@@ -47,10 +49,17 @@ double pcm16Rms(Uint8List pcm) {
 /// AudioWorklet (supported in Chrome, Firefox, Safari) and resamples to
 /// the requested rate; verify the delivered rate on real browsers.
 class RecordMicSource implements MicSource {
-  RecordMicSource({AudioRecorder? recorder})
-      : _recorder = recorder ?? AudioRecorder();
+  RecordMicSource({AudioRecorder? recorder, int? inputRateHz})
+      : _recorder = recorder ?? AudioRecorder(),
+        _inputRateHz = inputRateHz ?? kMicInputRateHz;
 
   final AudioRecorder _recorder;
+
+  /// The rate the browser actually captures at, when it ignores the
+  /// requested [kBrokerMicSampleRateHz] (0 = trust the request). When it
+  /// differs, chunks are downsampled so the broker's STT still gets
+  /// 16 kHz.
+  final int _inputRateHz;
 
   static const RecordConfig _config = RecordConfig(
     encoder: AudioEncoder.pcm16bits,
@@ -66,7 +75,19 @@ class RecordMicSource implements MicSource {
   Future<bool> hasPermission() => _recorder.hasPermission();
 
   @override
-  Future<Stream<Uint8List>> start() => _recorder.startStream(_config);
+  Future<Stream<Uint8List>> start() async {
+    final raw = await _recorder.startStream(_config);
+    if (_inputRateHz == 0 || _inputRateHz == kBrokerMicSampleRateHz) {
+      return raw;
+    }
+    // The browser is capturing at a rate that ignores our request;
+    // correct every chunk to 16 kHz before the session streams it out.
+    return raw.map((chunk) => resamplePcm16Mono(
+          chunk,
+          fromRate: _inputRateHz,
+          toRate: kBrokerMicSampleRateHz,
+        ));
+  }
 
   @override
   Future<void> stop() async {

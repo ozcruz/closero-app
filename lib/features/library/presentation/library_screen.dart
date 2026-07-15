@@ -44,27 +44,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           child: catalog.when(
             // The fixture load resolves within a frame; no skeleton flash.
             loading: () => const SizedBox.shrink(),
-            error: (error, stackTrace) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'The library could not load.',
-                    style: context.closType.headlineSmall,
-                  ),
-                  SizedBox(height: context.sp.sp3),
-                  Text(
-                    'Check your connection and try again.',
-                    style: context.closType.bodyMedium,
-                  ),
-                  SizedBox(height: context.sp.sp6),
-                  GhostButton(
-                    label: 'Try again',
-                    size: ClosButtonSize.medium,
-                    onPressed: () => ref.invalidate(scenarioCatalogProvider),
-                  ),
-                ],
-              ),
+            error: (error, stackTrace) => DataLoadError(
+              title: 'The library could not load.',
+              onRetry: () => ref.invalidate(scenarioCatalogProvider),
             ),
             data: (scenarios) => _LibraryBody(
               scenarios: scenarios,

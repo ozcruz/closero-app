@@ -25,6 +25,15 @@ const String kBrokerWssBase = String.fromEnvironment('BROKER_WSS_BASE');
 /// flutter build web --dart-define=LIVE_SCENARIOS=cold-call-saas-gatekeeper,discovery-roi-first-marcus
 const String _kLiveScenarios = String.fromEnvironment('LIVE_SCENARIOS');
 
+/// Actual browser mic capture rate in Hz, when it differs from the
+/// requested 16 kHz. Browsers often ignore the `record` sampleRate
+/// constraint and capture at the AudioContext's native rate (commonly
+/// 48000); if a real-device check confirms that, set this so mic audio
+/// is downsampled to the broker's 16 kHz STT rate before it goes on the
+/// wire. 0 (default) trusts the requested rate and resamples nothing.
+/// Set with: flutter build web --dart-define=MIC_INPUT_RATE=48000
+const int kMicInputRateHz = int.fromEnvironment('MIC_INPUT_RATE');
+
 /// Whether [scenarioId] runs on the live pipeline. Requires both a
 /// configured broker base and the scenario being on the allowlist, so
 /// live never fires without a broker to talk to.

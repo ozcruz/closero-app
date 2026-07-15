@@ -27,6 +27,58 @@ Session 14+ prompts. Grouped by when it actually bites. Last reviewed 2026-07-13
 - [ ] **Broker: move off Cloudflare free plan to Workers Paid ($5/mo)** before real
       traffic. The broker relies on Durable Objects; free plan is fine for own testing
       only. (broker-worker-setup)
+- [ ] **Site to app funnel does not exist yet (SITE repo work).** Verified 2026-07-14
+      against the deployed site: `app.closero.app` is referenced on ZERO pages and has no
+      DNS record, so on the day the app deploys the funnel still cannot reach it. Per
+      `context/hosting-and-auth.md:15-23` the Flutter app owns auth (Firebase persists per
+      origin, so a session on closero.app does NOT carry to app.closero.app): the site's
+      buttons must become plain links to `https://app.closero.app`, and the site's own
+      `login.html` / `signup.html` / `app.html` get retired. Cannot be done from a Claude
+      Code session in this repo (macOS TCC blocks `~/Desktop`, so the site repo is
+      unreadable here). (Session 17 research)
+- [ ] **Decide EARLY_ACCESS for the APP (launch week).** The site's flag
+      (`assets/js/firebase-init.js:52`, mirrored at `context/js/firebase-init.js`) only
+      toggles site COPY: it hides `.when-launched` so the early-access landing + waitlist
+      form shows instead of the full marketing site. It gates NOTHING (the site's
+      login/signup never read it; anyone can make an account today), and it has no reach
+      into the app's origin, so there is no mechanism for the app to be "consistent" with.
+      Not urgent while the app stays unlinked. Pick at launch week alongside the Resend
+      waitlist broadcast: (a) do nothing, rely on the unlisted URL; (b) Cloudflare Access
+      in front of app.closero.app (real gate, zero app code, email allowlist/OTP); (c) a
+      server-side allowlist checked at sign-in against the Firestore `waitlist` collection
+      (real gate, backend work). See `context/session-17-prompts.md`. (Session 17 research)
+
+## Before flipping any scenario to LIVE (the live-call gate)
+
+Neither of these blocks DEPLOYING the app: it ships scripted by default, and the
+Session 16 edge states (mic preflight, reconnect, abort/refund) only activate for a
+scenario on `LIVE_SCENARIOS` with `BROKER_WSS_BASE` set. They bite the moment a real
+user takes a live call.
+
+- [ ] **`abortSimSession` must return `{refunded: bool}`.** The client now calls the
+      callable on every post-grant technical failure, and shows the "it didn't count
+      against your sessions" line ONLY when `refunded` is true (if the call itself
+      fails it claims nothing about the cap). Confirm the deployed function in
+      `closero-backend`: (1) returns a boolean field literally named `refunded`, true
+      only when the cap credit was actually returned, honestly `false` when the grant
+      was never counted; (2) is idempotent on `requestId` (refund at most once, stable
+      result on a repeat call, e.g. a `refundedAt` marker on the grant doc); (3) accepts
+      the reason allowlist `socket_drop | mic_failure | launch_failure` (`socket_drop`
+      is NEW in Session 16) and refunds nothing for `user_hangup`. Deploy with
+      `firebase deploy --only functions:abortSimSession`. Test: call twice with a
+      counted test requestId (only the first decrements `sessionsUsed`), and once with
+      `user_hangup` (no change). (Session 16)
+- [ ] **Decide: broker mid-call resume, or degrade-to-refund.** The client reconnects on
+      a droppable close with bounded backoff and re-sends `hello` for the same
+      `requestId`. The broker has no mid-call resume in v1, so today a reconnect falls
+      through to a graceful abort + refund. That is honest and safe: **recommended for
+      v1, zero broker work** -- just confirm it in the live smoke test (pull the network
+      ~5s: banner appears, clock pauses, aborted screen, refund fires). If you later want
+      TRUE resume, it is broker-side work in `closero-broker`: keep the grant doc valid
+      for a re-hello, keep the Durable Object's conversation state alive for a grace
+      window (~15s, matching the client) after `webSocketClose`, treat a reconnect as a
+      resume rather than `4409 superseded`, and re-emit `ready` (the client resumes on
+      `ready` with zero app changes). (Session 16)
 
 ## Analytics (PostHog, Session 15)
 
@@ -74,11 +126,18 @@ Session 14+ prompts. Grouped by when it actually bites. Last reviewed 2026-07-13
 - [ ] **Sim-cap functions on the Firestore emulator.** Currently tested against an
       in-memory fake, not the emulator (no Java on this Mac). Low priority.
       (backend-sim-cap-functions)
-- [ ] **Safari autoplay (real browser).** The first TTS utterance plays on `utteranceEnd`,
-      not on the Start tap, so Safari may block it; may need silent-play priming. Verify on
-      real Safari (couldn't test headlessly). (Session 14)
-- [ ] **Mic sample rate (real browser).** Confirm `record` delivers 16kHz PCM16 to
-      Deepgram on both Chrome and Safari. (Session 14)
+- [ ] **Safari autoplay (real browser).** Client handling now shipped (Session 16): the
+      preflight builds + `preload()`s the TtsPlayer, and the Start tap `prime()`s it (silent
+      WAV play) inside the user gesture, plus the mic grant in the same preflight gesture
+      unlocks audio. STILL needs a real-Safari check that the first persona utterance
+      (starts on `utteranceEnd`, not the tap) actually plays. Couldn't test headlessly.
+      (Session 14, implemented Session 16)
+- [ ] **Mic sample rate (real browser).** Client safeguard now shipped (Session 16):
+      `resamplePcm16Mono` + the `MIC_INPUT_RATE` dart-define downsample mic audio to 16kHz
+      when a browser ignores the requested rate. STILL needs a real-device measurement on
+      Chrome AND Safari of the ACTUAL delivered rate; if it is 48kHz, ship the build with
+      `--dart-define=MIC_INPUT_RATE=48000` (or the measured rate). (Session 14, implemented
+      Session 16)
 
 ## Verified at code level (no action, recorded for confidence)
 

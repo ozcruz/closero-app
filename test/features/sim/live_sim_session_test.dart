@@ -170,6 +170,47 @@ Uint8List _loudChunk({int ms = 100}) {
   return data.buffer.asUint8List();
 }
 
+String _uttStartFrame(int id, {int sentenceIndex = 0}) => jsonEncode({
+      'type': 'utteranceStart',
+      'utteranceId': id,
+      'sentenceIndex': sentenceIndex,
+      'text': 'Line $id.',
+      'format': 'audio/mpeg',
+    });
+
+typedef _SeqHarness = ({
+  LiveSimSession session,
+  List<_FakeConn> conns,
+  _FakeMic mic,
+  _FakePlayer player,
+});
+
+/// Like [_build] but hands out a SEQUENCE of connections (one per
+/// [openConnection] call) so a reconnect opens a fresh socket, and takes
+/// reconnect/stall config.
+_SeqHarness _buildSeq({
+  required List<_FakeConn> conns,
+  ReconnectPolicy? reconnect,
+  Duration stallTimeout = const Duration(seconds: 30),
+}) {
+  final mic = _FakeMic();
+  final player = _FakePlayer();
+  var idx = 0;
+  final session = LiveSimSession(
+    requestId: 'req-abcdefghij1234567890',
+    scenarioId: 'cold-call-saas-gatekeeper',
+    simType: SimType.coldCall,
+    fetchIdToken: () async => 'id-token',
+    openConnection: () => conns[idx++],
+    micSource: mic,
+    ttsPlayer: player,
+    tzOffsetMinutes: () => -300,
+    reconnect: reconnect,
+    stallTimeout: stallTimeout,
+  );
+  return (session: session, conns: conns, mic: mic, player: player);
+}
+
 void main() {
   test('start sends hello then opens the mic once ready', () async {
     final h = _build();
@@ -385,6 +426,121 @@ void main() {
     await h.conn.serverClose(BrokerCloseCode.superseded);
     await expectLater(ended, throwsA(isA<SimStartException>()));
 
+    await h.session.dispose();
+  });
+
+  test('a droppable mid-call close reconnects and resumes', () async {
+    final h = _buildSeq(
+      conns: [_FakeConn(), _FakeConn()],
+      reconnect: const ReconnectPolicy(
+        backoff: [Duration.zero],
+        readyTimeout: Duration(seconds: 1),
+      ),
+    );
+    final states = <SimLinkState>[];
+    h.session.linkState.listen(states.add);
+    final started = h.session.start();
+    await pumpEventQueue();
+    h.conns[0].push(_readyFrame());
+    await started;
+
+    // 1006 (abnormal closure) is not a terminal broker code: reconnect.
+    await h.conns[0].serverClose(1006);
+    await pumpEventQueue(times: 50);
+    expect(h.conns[1].sent('hello'), isTrue);
+    h.conns[1].push(_readyFrame());
+    await pumpEventQueue();
+
+    expect(
+      states,
+      containsAllInOrder([SimLinkState.reconnecting, SimLinkState.live]),
+    );
+    await h.session.dispose();
+  });
+
+  test('reconnect exhausts the window and ends with socket_drop', () async {
+    final h = _buildSeq(
+      conns: [_FakeConn(), _FakeConn()],
+      reconnect: const ReconnectPolicy(
+        backoff: [Duration.zero],
+        readyTimeout: Duration(milliseconds: 60),
+      ),
+    );
+    final started = h.session.start();
+    await pumpEventQueue();
+    h.conns[0].push(_readyFrame());
+    await started;
+
+    final ended = h.session.ended;
+    await h.conns[0].serverClose(1006);
+    // No ready arrives on the second socket: the attempt times out.
+    await expectLater(
+      ended,
+      throwsA(isA<SimStartException>()
+          .having((e) => e.reason, 'reason', 'socket_drop')),
+    );
+    await h.session.dispose();
+  });
+
+  test('a terminal close (superseded) aborts without reconnecting', () async {
+    final h = _buildSeq(
+      conns: [_FakeConn(), _FakeConn()],
+      reconnect: const ReconnectPolicy(backoff: [Duration.zero]),
+    );
+    final states = <SimLinkState>[];
+    h.session.linkState.listen(states.add);
+    final started = h.session.start();
+    await pumpEventQueue();
+    h.conns[0].push(_readyFrame());
+    await started;
+
+    final ended = h.session.ended;
+    await h.conns[0].serverClose(BrokerCloseCode.superseded);
+    await expectLater(ended, throwsA(isA<SimStartException>()));
+    expect(states, isNot(contains(SimLinkState.reconnecting)));
+    await h.session.dispose();
+  });
+
+  test('a stalled utterance drops its audio and the call continues',
+      () async {
+    final h = _buildSeq(
+      conns: [_FakeConn()],
+      stallTimeout: const Duration(milliseconds: 40),
+    );
+    final started = h.session.start();
+    await pumpEventQueue();
+    h.conns[0].push(_readyFrame());
+    await started;
+
+    // Transcript-then-no-audio: the watchdog drops the silent utterance.
+    h.conns[0].push(_uttStartFrame(1));
+    await pumpEventQueue();
+    await Future<void>.delayed(const Duration(milliseconds: 70));
+    expect(h.player.abortedIds, contains(1));
+    await h.session.dispose();
+  });
+
+  test('a dead audio pipeline (repeated stalls, nothing plays) aborts',
+      () async {
+    final h = _buildSeq(
+      conns: [_FakeConn()],
+      stallTimeout: const Duration(milliseconds: 25),
+    );
+    final started = h.session.start();
+    await pumpEventQueue();
+    h.conns[0].push(_readyFrame());
+    await started;
+
+    final ended = h.session.ended;
+    for (var i = 1; i <= 3; i++) {
+      h.conns[0].push(_uttStartFrame(i));
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+    }
+    await expectLater(
+      ended,
+      throwsA(isA<SimStartException>()
+          .having((e) => e.reason, 'reason', 'launch_failure')),
+    );
     await h.session.dispose();
   });
 }

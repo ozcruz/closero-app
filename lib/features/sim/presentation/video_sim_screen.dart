@@ -42,8 +42,12 @@ class VideoSimScreen extends StatelessWidget {
           goodCount: controller.goodCount,
           visemeGroups: controller.visemeGroups,
           onToggleMuted: controller.toggleMuted,
+          // End is held while reconnecting: there is no live socket to
+          // carry the hang-up, and the banner already says to hold on.
           onEndCall:
-              controller.phase == SimPhase.live ? onEndCall : null,
+              controller.phase == SimPhase.live && !controller.reconnecting
+                  ? onEndCall
+                  : null,
         ),
       ),
     );

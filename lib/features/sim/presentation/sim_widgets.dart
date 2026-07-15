@@ -513,7 +513,7 @@ class _CoachingPanelState extends State<CoachingPanel> {
             style: ClosType.style(
               fontSize: 13,
               weight: FontWeight.w400,
-              color: context.closColors.dim1,
+              color: context.closColors.body,
             ),
           ),
         for (final hint in widget.hints) ...[
@@ -540,7 +540,7 @@ class _CoachingPanelState extends State<CoachingPanel> {
             style: ClosType.style(
               fontSize: 13,
               weight: FontWeight.w400,
-              color: context.closColors.dim1,
+              color: context.closColors.body,
             ),
           ),
         for (final line in widget.transcript) ...[
@@ -965,6 +965,113 @@ class SimStartFailed extends StatelessWidget {
               onPressed: onBack,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Aborted-call screen: a granted session that ended for a technical
+/// reason (dropped link past the reconnect window, dead audio, a
+/// post-grant start failure). No score. Calm, no blame, no jargon.
+///
+/// The "it didn't count" line shows ONLY when the refund is confirmed,
+/// so the copy never claims something the client can't verify.
+class SimAborted extends StatelessWidget {
+  const SimAborted({
+    super.key,
+    required this.refundConfirmed,
+    required this.onRetry,
+    required this.onBack,
+  });
+
+  /// True: refund confirmed. Null/false: say nothing about the cap.
+  final bool? refundConfirmed;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final sp = context.sp;
+    final refunded = refundConfirmed == true;
+
+    return Center(
+      child: EmptyState(
+        icon: const PowerIcon(),
+        title: 'The call ended early',
+        body: refunded
+            ? "The connection dropped, so we couldn't finish this one. It "
+                "didn't count against your sessions, so you can start "
+                'again whenever you like.'
+            : "The connection dropped, so we couldn't finish this one. You "
+                'can start again whenever you like.',
+        action: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 260,
+              child: PrimaryButton(
+                label: 'Try again',
+                expand: true,
+                onPressed: onRetry,
+              ),
+            ),
+            SizedBox(height: sp.sp3),
+            GhostButton(label: 'Back to simulations', onPressed: onBack),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Calm floating pill shown over the live stage while the link drops and
+/// auto-reconnects. Neutral surface, a grayscale dot, no alarm; the call
+/// clock is paused behind it.
+class ReconnectingBanner extends StatelessWidget {
+  const ReconnectingBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.closColors;
+    final sp = context.sp;
+
+    return Semantics(
+      liveRegion: true,
+      label: 'Reconnecting',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface2,
+          border: Border.all(color: colors.border2),
+          borderRadius: context.closRadius.buttonRadius,
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: sp.sp4,
+            vertical: sp.sp2,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: colors.mid,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              SizedBox(width: sp.sp3),
+              Text(
+                'Reconnecting. Hold on a moment.',
+                style: ClosType.style(
+                  fontSize: 13,
+                  weight: FontWeight.w500,
+                  color: colors.body,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

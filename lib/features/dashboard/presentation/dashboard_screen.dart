@@ -35,27 +35,9 @@ class DashboardScreen extends ConsumerWidget {
     return data.when(
       // The fixture load resolves within a frame; no skeleton flash.
       loading: () => const SizedBox.shrink(),
-      error: (error, stackTrace) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'The dashboard could not load.',
-              style: context.closType.headlineSmall,
-            ),
-            SizedBox(height: context.sp.sp3),
-            Text(
-              'Check your connection and try again.',
-              style: context.closType.bodyMedium,
-            ),
-            SizedBox(height: context.sp.sp6),
-            GhostButton(
-              label: 'Try again',
-              size: ClosButtonSize.medium,
-              onPressed: () => ref.invalidate(dashboardDataProvider),
-            ),
-          ],
-        ),
+      error: (error, stackTrace) => DataLoadError(
+        title: 'The dashboard could not load.',
+        onRetry: () => ref.invalidate(dashboardDataProvider),
       ),
       data: (data) => _DashboardBody(data: data),
     );

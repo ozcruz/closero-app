@@ -21,6 +21,17 @@ import 'package:just_audio/just_audio.dart';
 import 'broker_protocol.dart' show PlaybackPosition;
 
 abstract class TtsPlayer {
+  /// Preload a tiny silent clip so [prime] can start it immediately from
+  /// within a user gesture. Safe to call more than once. No-op by default
+  /// (the scripted path and test fakes never touch real audio).
+  Future<void> preload() async {}
+
+  /// Best-effort autoplay unlock: play the preloaded silent clip inside
+  /// the Start-tap user gesture so the FIRST real persona utterance,
+  /// which starts on an `utteranceEnd` event rather than the tap, is not
+  /// blocked by Safari's autoplay policy. No-op by default.
+  Future<void> prime() async {}
+
   /// An utterance became audible: [position] is its just_audio playback
   /// clock, for viseme scheduling and the output envelope.
   void Function(int utteranceId, Stream<Duration> position)? onPlaying;
@@ -85,6 +96,38 @@ class JustAudioTtsPlayer extends TtsPlayer {
   int _generation = 0;
 
   StreamSubscription<ProcessingState>? _stateSub;
+
+  /// A ~50ms silent WAV, built once, used only to satisfy the browser's
+  /// autoplay-unlock gesture requirement. Self-contained (no asset).
+  static final String _silentSourceUri = _buildSilentWavDataUri();
+
+  @override
+  Future<void> preload() async {
+    if (_disposed) return;
+    try {
+      await _player
+          .setAudioSource(AudioSource.uri(Uri.parse(_silentSourceUri)));
+    } on Object catch (e) {
+      // Priming is a best-effort unlock; a failure here must never block
+      // the call from starting.
+      debugPrint('JustAudioTtsPlayer.preload failed (non-fatal): $e');
+    }
+  }
+
+  @override
+  Future<void> prime() async {
+    if (_disposed) return;
+    try {
+      if (_player.audioSource == null) {
+        await _player
+            .setAudioSource(AudioSource.uri(Uri.parse(_silentSourceUri)));
+      }
+      await _player.play();
+      await _player.stop();
+    } on Object catch (e) {
+      debugPrint('JustAudioTtsPlayer.prime failed (non-fatal): $e');
+    }
+  }
 
   @override
   PlaybackPosition? get playing {
@@ -218,4 +261,40 @@ class JustAudioTtsPlayer extends TtsPlayer {
     await _stateSub?.cancel();
     await _player.dispose();
   }
+}
+
+/// A ~50ms mono 16-bit PCM WAV of pure silence, as a `data:` URI. Used
+/// once to unlock browser autoplay from a user gesture; never audible.
+String _buildSilentWavDataUri() {
+  const sampleRate = 8000;
+  const numChannels = 1;
+  const bytesPerSample = 2;
+  const numSamples = 400; // 50ms at 8kHz
+  const dataSize = numSamples * numChannels * bytesPerSample;
+  final header = ByteData(44);
+  void tag(int offset, String s) {
+    for (var i = 0; i < s.length; i++) {
+      header.setUint8(offset + i, s.codeUnitAt(i));
+    }
+  }
+
+  tag(0, 'RIFF');
+  header.setUint32(4, 36 + dataSize, Endian.little);
+  tag(8, 'WAVE');
+  tag(12, 'fmt ');
+  header.setUint32(16, 16, Endian.little); // PCM fmt chunk size
+  header.setUint16(20, 1, Endian.little); // audioFormat = PCM
+  header.setUint16(22, numChannels, Endian.little);
+  header.setUint32(24, sampleRate, Endian.little);
+  header.setUint32(
+      28, sampleRate * numChannels * bytesPerSample, Endian.little); // byteRate
+  header.setUint16(32, numChannels * bytesPerSample, Endian.little); // block
+  header.setUint16(34, bytesPerSample * 8, Endian.little); // bitsPerSample
+  tag(36, 'data');
+  header.setUint32(40, dataSize, Endian.little);
+
+  final bytes = BytesBuilder(copy: false)
+    ..add(header.buffer.asUint8List())
+    ..add(Uint8List(dataSize)); // zero-filled = silence
+  return 'data:audio/wav;base64,${base64Encode(bytes.toBytes())}';
 }

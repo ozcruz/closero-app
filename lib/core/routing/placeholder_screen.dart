@@ -50,33 +50,26 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
-/// Unknown routes. No prototype screenshot exists for the 404; this
-/// matches the shell style per the build plan.
+/// Unknown routes (go_router `errorBuilder`). No prototype screenshot
+/// exists for the 404; this matches the app shell edge-state style:
+/// centered, a calm brand mark, one low-pressure line, a ghost way back.
 class NotFoundScreen extends StatelessWidget {
   const NotFoundScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final sp = context.sp;
-    final type = context.closType;
-
     return ClosScaffold(
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Page not found', style: type.headlineMedium),
-            SizedBox(height: sp.sp3),
-            Text(
-              'That page does not exist, or it moved.',
-              style: type.bodyMedium,
-            ),
-            SizedBox(height: sp.sp6),
-            GhostButton(
-              label: 'Back to dashboard',
-              onPressed: () => const DashboardRoute().go(context),
-            ),
-          ],
+        child: EmptyState(
+          // The brand ring, recolored neutral: you wandered off, but
+          // you're still in Closero. Not an alarm.
+          icon: CloseroMark(size: 24, color: context.closColors.dim2),
+          title: 'Page not found',
+          body: 'That page does not exist, or it moved.',
+          action: GhostButton(
+            label: 'Back to dashboard',
+            onPressed: () => const DashboardRoute().go(context),
+          ),
         ),
       ),
     );

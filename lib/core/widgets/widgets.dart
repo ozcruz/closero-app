@@ -14,6 +14,7 @@ export 'clos_tabs.dart';
 export 'clos_text_field.dart';
 export 'clos_toggle.dart';
 export 'closero_wordmark.dart';
+export 'data_load_error.dart';
 export 'delta_pill.dart';
 export 'empty_state.dart';
 export 'grain_overlay.dart';

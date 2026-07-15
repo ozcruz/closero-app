@@ -38,8 +38,12 @@ class ColdCallSimScreen extends StatelessWidget {
           transcript: controller.transcript,
           goodCount: controller.goodCount,
           onToggleMuted: controller.toggleMuted,
+          // End is held while reconnecting: there is no live socket to
+          // carry the hang-up, and the banner already says to hold on.
           onEndCall:
-              controller.phase == SimPhase.live ? onEndCall : null,
+              controller.phase == SimPhase.live && !controller.reconnecting
+                  ? onEndCall
+                  : null,
         ),
       ),
     );

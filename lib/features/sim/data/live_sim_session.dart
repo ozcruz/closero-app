@@ -45,13 +45,52 @@ abstract interface class ServerEndableSession {
   Future<SimResult> get ended;
 }
 
-/// Thrown from [LiveSimSession.start] when the call cannot begin
-/// (mic denied, socket refused, hello rejected). The controller treats
-/// it as a start failure; the refund + honest-copy polish is Session 16.
+/// Transport health for the live call. The controller pauses the clock
+/// and shows a reconnecting banner on [reconnecting], resumes on [live].
+/// A terminal drop is NOT reported here: it arrives as an error on
+/// [ServerEndableSession.ended], carrying the abort reason.
+enum SimLinkState { live, reconnecting }
+
+/// A session that reports transport health so the screen can show a
+/// reconnecting banner. Kept off the base [SimSession] so the scripted
+/// path is unaffected.
+abstract interface class LinkStateReporting {
+  Stream<SimLinkState> get linkState;
+}
+
+/// Bounded auto-reconnect for a mid-call socket drop. Null (the default)
+/// keeps the pre-Session-16 behavior: an unexpected close fails the call
+/// immediately. When set, a droppable close is retried on this backoff
+/// schedule; [backoff.length] is the attempt count and the total of the
+/// delays plus [readyTimeout] per attempt bounds the window.
+class ReconnectPolicy {
+  const ReconnectPolicy({
+    this.backoff = const [
+      Duration(seconds: 1),
+      Duration(seconds: 3),
+      Duration(seconds: 5),
+    ],
+    this.readyTimeout = const Duration(seconds: 6),
+  });
+
+  /// Delay before each successive reconnect attempt.
+  final List<Duration> backoff;
+
+  /// How long one reconnect attempt waits for a fresh `ready` before it
+  /// counts as failed and the next backoff begins.
+  final Duration readyTimeout;
+}
+
+/// Thrown from [LiveSimSession.start], and used to complete
+/// [ServerEndableSession.ended] with an error on a mid-call failure,
+/// when the call cannot begin or cannot continue (mic denied/failed,
+/// socket refused/dropped, hello rejected). The controller maps [reason]
+/// straight onto the refund path.
 class SimStartException implements Exception {
   const SimStartException(this.reason, [this.message]);
 
-  /// Abort-vocabulary reason: 'mic_failure' | 'launch_failure'.
+  /// Refund-vocabulary reason: 'mic_failure' | 'launch_failure' |
+  /// 'socket_drop' (see kRefundableAbortReasons).
   final String reason;
   final String? message;
 
@@ -69,6 +108,12 @@ const int _kVadSustainMs = 700;
 const Duration _kEnvelopeTick = Duration(milliseconds: 120);
 const Duration _kReadyTimeout = Duration(seconds: 15);
 
+/// How many utterances in a row may stall (transcript text arrived, audio
+/// never started) with NOTHING having ever played before we call the
+/// whole audio pipeline dead and abort. A single stall just drops that
+/// utterance and the call continues on text.
+const int _kDeadPipelineStalls = 3;
+
 const Map<String, String> _kCategoryLabels = {
   'objections': 'Objections',
   'discovery': 'Discovery',
@@ -78,7 +123,11 @@ const Map<String, String> _kCategoryLabels = {
 };
 
 class LiveSimSession
-    implements SimSession, VisemeStreaming, ServerEndableSession {
+    implements
+        SimSession,
+        VisemeStreaming,
+        ServerEndableSession,
+        LinkStateReporting {
   LiveSimSession({
     required this.requestId,
     required this.scenarioId,
@@ -88,10 +137,14 @@ class LiveSimSession
     required MicSource micSource,
     required TtsPlayer ttsPlayer,
     int Function()? tzOffsetMinutes,
+    ReconnectPolicy? reconnect,
+    Duration stallTimeout = const Duration(seconds: 2),
   })  : _idTokenProvider = fetchIdToken,
         _connect = openConnection,
         _mic = micSource,
         _player = ttsPlayer,
+        _reconnectPolicy = reconnect,
+        _stallGrace = stallTimeout,
         _tzOffsetMinutes = tzOffsetMinutes ??
             (() => DateTime.now().timeZoneOffset.inMinutes) {
     _scheduler = vs.VisemeScheduler(onMouthGroup: _emitViseme);
@@ -115,6 +168,8 @@ class LiveSimSession
   final BrokerConnection Function() _connect;
   final MicSource _mic;
   final TtsPlayer _player;
+  final ReconnectPolicy? _reconnectPolicy;
+  final Duration _stallGrace;
   final int Function() _tzOffsetMinutes;
 
   late final vs.VisemeScheduler _scheduler;
@@ -124,6 +179,7 @@ class LiveSimSession
   final _inputLevel = StreamController<double>.broadcast();
   final _outputLevel = StreamController<double>.broadcast();
   final _visemeGroups = StreamController<int>.broadcast();
+  final _linkState = StreamController<SimLinkState>.broadcast();
 
   final _readyCompleter = Completer<void>();
   final _resultCompleter = Completer<SimResult>();
@@ -133,11 +189,33 @@ class LiveSimSession
   StreamSubscription<Uint8List>? _micSub;
   Timer? _envelope;
 
+  /// Per-utterance stall watchdogs: armed on utteranceStart, cancelled
+  /// the moment that utterance's audio starts playing.
+  final Map<int, Timer> _stallTimers = {};
+
+  /// Ready signal for a reconnect handshake (the initial handshake uses
+  /// [_readyCompleter], already completed by the time we reconnect).
+  Completer<void>? _reconnectReady;
+
   bool _started = false;
   bool _disposed = false;
   bool _ending = false;
   bool _muted = false;
   bool _personaPlaying = false;
+
+  /// True once [start] has fully succeeded, so a later drop is a mid-call
+  /// event eligible for reconnect (a pre-ready drop stays a start failure).
+  bool _live = false;
+
+  /// True while a reconnect loop is running: mic transmission is held and
+  /// a second drop does not start a second loop.
+  bool _reconnecting = false;
+
+  /// Whether any utterance has ever produced audio, and how many have
+  /// stalled back to back with none playing (dead-pipeline detection).
+  bool _anyAudioPlayed = false;
+  int _consecutiveStalls = 0;
+
   int _tick = 0;
 
   /// From `ready`: whether the local VAD trigger is allowed to fire.
@@ -161,6 +239,9 @@ class LiveSimSession
 
   @override
   Stream<int> get visemeGroups => _visemeGroups.stream;
+
+  @override
+  Stream<SimLinkState> get linkState => _linkState.stream;
 
   @override
   Future<SimResult> get ended => _resultCompleter.future;
@@ -240,6 +321,9 @@ class LiveSimSession
       _tick++;
       _outputLevel.add(_personaPlaying ? _envelopeLevel() : 0.0);
     });
+
+    // From here a drop is a mid-call event, eligible for reconnect.
+    _live = true;
   }
 
   double _envelopeLevel() => 0.675 + 0.325 * math.sin(_tick * 1.1);
@@ -248,6 +332,12 @@ class LiveSimSession
 
   void _onMicChunk(Uint8List chunk) {
     if (_disposed || _ending) return;
+    // While reconnecting there is no live socket to receive audio; hold
+    // transmission and read the input as silent until the link is back.
+    if (_reconnecting) {
+      _inputLevel.add(0);
+      return;
+    }
     if (_muted) {
       _inputLevel.add(0);
       return;
@@ -320,7 +410,12 @@ class LiveSimSession
     switch (msg) {
       case ReadyMessage():
         _interruptTriggerEnabled = msg.interruptTriggerEnabled;
-        if (!_readyCompleter.isCompleted) _readyCompleter.complete();
+        if (!_readyCompleter.isCompleted) {
+          _readyCompleter.complete();
+        } else if (_reconnectReady?.isCompleted == false) {
+          // A reconnect handshake's `ready`: the link is back.
+          _reconnectReady!.complete();
+        }
       case PersonaStateMessage():
         // 'speaking'/'listening' run on the send clock; audible state is
         // driven from local playback. 'thinking' needs no UI here yet.
@@ -337,6 +432,7 @@ class LiveSimSession
       case UtteranceStartMessage():
         if (msg.sentenceIndex == 0) _bargedThisReply = false;
         _player.beginUtterance(msg.utteranceId);
+        _armStallWatchdog(msg.utteranceId);
       case VisemeMessage():
         _scheduler.addEvents([
           for (final e in msg.events)
@@ -349,6 +445,7 @@ class LiveSimSession
       case UtteranceEndMessage():
         _player.endUtterance(msg.utteranceId);
       case UtteranceAbortMessage():
+        _cancelStallWatchdog(msg.utteranceId);
         _player.abortUtterance(msg.utteranceId);
         _scheduler.removeUtterance('${msg.utteranceId}');
       case HintMessage():
@@ -403,6 +500,11 @@ class LiveSimSession
 
   void _onUtterancePlaying(int utteranceId, Stream<Duration> position) {
     if (_disposed) return;
+    // Audio started: cancel this utterance's stall watchdog and clear the
+    // dead-pipeline counters, since the pipeline is demonstrably alive.
+    _cancelStallWatchdog(utteranceId);
+    _anyAudioPlayed = true;
+    _consecutiveStalls = 0;
     _personaPlaying = true;
     _scheduler.attachPlayback(
       utteranceId: '$utteranceId',
@@ -461,22 +563,163 @@ class LiveSimSession
   // ----------------------------- teardown -----------------------------------
 
   void _onSocketDone() {
-    if (_disposed) return;
+    // A reconnect loop owns the link while it runs; ignore closes it saw.
+    if (_disposed || _reconnecting) return;
     final code = _conn?.closeCode;
     if (code == BrokerCloseCode.normal) return;
-    _failSession(
-      SimStartException('launch_failure', 'socket closed: $code'),
-    );
+    _handleDrop(code, 'socket closed: $code');
   }
 
   void _onSocketError(Object error) {
-    if (_disposed) return;
-    _failSession(SimStartException('launch_failure', 'socket error: $error'));
+    if (_disposed || _reconnecting) return;
+    _handleDrop(null, 'socket error: $error');
+  }
+
+  /// A non-normal close mid-call: reconnect within the bounded window if
+  /// a policy is set and the close looks transient, else fail the call
+  /// with a refundable socket_drop.
+  void _handleDrop(int? code, String detail) {
+    if (_ending) return;
+    if (_live && _reconnectPolicy != null && _isReconnectable(code)) {
+      unawaited(_attemptReconnect());
+      return;
+    }
+    _failSession(SimStartException('socket_drop', detail));
+  }
+
+  /// The broker's deliberate rejections are terminal; anything else (a
+  /// transport drop, 1006, a server blip) is worth a reconnect.
+  static const Set<int> _terminalCloseCodes = {
+    BrokerCloseCode.normal,
+    BrokerCloseCode.badHello,
+    BrokerCloseCode.unauthenticated,
+    BrokerCloseCode.noGrant,
+    BrokerCloseCode.helloTimeout,
+    BrokerCloseCode.superseded,
+  };
+
+  bool _isReconnectable(int? code) =>
+      code == null || !_terminalCloseCodes.contains(code);
+
+  /// Reopen the socket to the same session and re-handshake, on the
+  /// backoff schedule, pausing the persona. Resume on the first `ready`;
+  /// give up and fail (refundable) once the window is exhausted.
+  Future<void> _attemptReconnect() async {
+    if (_reconnecting || _disposed || _ending) return;
+    _reconnecting = true;
+    _linkState.add(SimLinkState.reconnecting);
+
+    // Silence the dead link and rest the persona so playback resumes
+    // cleanly once we are back.
+    await _framesSub?.cancel();
+    _framesSub = null;
+    await _conn?.close();
+    _conn = null;
+    _player.stopCurrent();
+    _scheduler.endUtterance();
+    _personaPlaying = false;
+    _outputLevel.add(0);
+
+    final policy = _reconnectPolicy!;
+    for (var attempt = 0; attempt < policy.backoff.length; attempt++) {
+      if (_disposed || _ending) {
+        _reconnecting = false;
+        return;
+      }
+      await Future<void>.delayed(policy.backoff[attempt]);
+      if (_disposed || _ending) {
+        _reconnecting = false;
+        return;
+      }
+      if (await _tryOneReconnect(policy.readyTimeout)) {
+        _reconnecting = false;
+        if (!_disposed) _linkState.add(SimLinkState.live);
+        return;
+      }
+    }
+
+    _reconnecting = false;
+    if (!_disposed && !_ending) {
+      _failSession(const SimStartException('socket_drop', 'reconnect failed'));
+    }
+  }
+
+  /// One reconnect attempt: fresh socket, re-hello, wait for `ready`.
+  Future<bool> _tryOneReconnect(Duration readyTimeout) async {
+    await _framesSub?.cancel();
+    _framesSub = null;
+    await _conn?.close();
+    _conn = null;
+
+    final conn = _connect();
+    _conn = conn;
+    try {
+      await conn.ready;
+    } on Object {
+      return false;
+    }
+    if (_disposed || _ending) return false;
+
+    _framesSub = conn.frames.listen(
+      _onFrame,
+      onDone: _onSocketDone,
+      onError: (Object e, StackTrace _) => _onSocketError(e),
+    );
+
+    final idToken = await _idTokenProvider();
+    if (idToken == null || idToken.isEmpty) return false;
+    conn.sendText(encodeHello(
+      idToken: idToken,
+      requestId: requestId,
+      scenarioId: scenarioId,
+      simType: simType.schemaValue,
+      tzOffsetMinutes: _tzOffsetMinutes(),
+    ));
+
+    final ready = Completer<void>();
+    _reconnectReady = ready;
+    try {
+      await ready.future.timeout(readyTimeout);
+      return true;
+    } on Object {
+      return false;
+    } finally {
+      _reconnectReady = null;
+    }
+  }
+
+  // --------------------------- TTS stall watchdog ---------------------------
+
+  void _armStallWatchdog(int utteranceId) {
+    _stallTimers[utteranceId]?.cancel();
+    _stallTimers[utteranceId] =
+        Timer(_stallGrace, () => _onUtteranceStalled(utteranceId));
+  }
+
+  void _cancelStallWatchdog(int utteranceId) {
+    _stallTimers.remove(utteranceId)?.cancel();
+  }
+
+  /// An utterance's transcript text arrived but its audio never started
+  /// within [_stallTimeout]. Drop the silent audio and continue on the
+  /// transcript line, which is already shown; only if the pipeline looks
+  /// dead (nothing has EVER played and stalls keep piling up) do we abort.
+  void _onUtteranceStalled(int utteranceId) {
+    _stallTimers.remove(utteranceId);
+    if (_disposed || _ending || _reconnecting) return;
+    _player.abortUtterance(utteranceId);
+    _scheduler.removeUtterance('$utteranceId');
+    _consecutiveStalls++;
+    if (!_anyAudioPlayed && _consecutiveStalls >= _kDeadPipelineStalls) {
+      _failSession(
+        const SimStartException('launch_failure', 'tts pipeline stalled'),
+      );
+    }
   }
 
   /// An unexpected end before a score: surface it on the completers so
-  /// awaiters (start, end, the controller) unblock. Session 16 turns
-  /// this into the aborted-call UX and the abortSimSession refund.
+  /// awaiters (start, end, the controller) unblock, and route the
+  /// controller to the aborted-call UX + abortSimSession refund.
   void _failSession(Object error) {
     if (!_readyCompleter.isCompleted) _readyCompleter.completeError(error);
     if (!_resultCompleter.isCompleted) _resultCompleter.completeError(error);
@@ -494,6 +737,10 @@ class LiveSimSession
     if (_disposed) return;
     _disposed = true;
     _envelope?.cancel();
+    for (final timer in _stallTimers.values) {
+      timer.cancel();
+    }
+    _stallTimers.clear();
     _failSession(
       const SimStartException('launch_failure', 'session disposed'),
     );
@@ -510,6 +757,7 @@ class LiveSimSession
       _inputLevel.close(),
       _outputLevel.close(),
       _visemeGroups.close(),
+      _linkState.close(),
     ]);
   }
 }

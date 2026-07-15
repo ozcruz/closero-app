@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,8 +13,10 @@ import '../application/sim_controller.dart';
 import '../data/scripted_sim_session.dart';
 import '../data/sim_gate.dart';
 import '../data/sim_session_factory.dart';
+import '../data/tts_player.dart';
 import '../domain/sim_script.dart';
 import '../domain/sim_session.dart';
+import 'sim_preflight.dart';
 import 'sim_widgets.dart';
 
 /// Shared lifecycle for both sim screens: builds the controller for a
@@ -49,7 +53,21 @@ class SimHost extends ConsumerStatefulWidget {
 
 class _SimHostState extends ConsumerState<SimHost> {
   late final SimController _controller;
+
+  /// Whether this scenario runs on the live broker pipeline (device
+  /// check + real mic + audio) or the scripted stand-in (starts at once).
+  late final bool _isLive;
+
   bool _routedAway = false;
+
+  /// Live path only: the gate does not run until the user taps Start in
+  /// the preflight, so a denied mic never burns a session.
+  bool _started = false;
+
+  /// Live path only: a player built early and preloaded so the Start tap
+  /// can prime it inside the user gesture (Safari autoplay unlock). It is
+  /// consumed by the first session; disposed here if never consumed.
+  TtsPlayer? _primedPlayer;
 
   /// Last phase an analytics event fired for, so each lifecycle event
   /// fires once per transition rather than on every notifyListeners.
@@ -58,20 +76,47 @@ class _SimHostState extends ConsumerState<SimHost> {
   @override
   void initState() {
     super.initState();
+    _isLive = liveScenarioEnabled(widget.scenarioId);
     _controller = SimController(
       gate: ref.read(simGateProvider),
       createSession: _buildSession,
+      // Only a granted live session can be refunded; the scripted path
+      // never touches the gate's cap in a refundable way.
+      abort: _isLive ? ref.read(simAbortProvider) : null,
     );
     _controller.addListener(_onControllerChanged);
+    if (_isLive) {
+      // Build + preload the player now so the Start tap can prime it in
+      // the user gesture. The gate waits for that tap (device check
+      // first), so a denied mic never reaches startSimSession.
+      final player = ref.read(ttsPlayerFactoryProvider)();
+      _primedPlayer = player;
+      unawaited(player.preload());
+    } else {
+      _started = true;
+      _controller.start();
+    }
+  }
+
+  /// The preflight Start tap: a user gesture. Prime audio here (unblocks
+  /// Safari), then run the gate + session.
+  void _handleStart() {
+    unawaited(_primedPlayer?.prime() ?? Future<void>.value());
+    setState(() => _started = true);
     _controller.start();
   }
 
   SimSession _buildSession(String requestId) {
-    if (liveScenarioEnabled(widget.scenarioId)) {
+    if (_isLive) {
+      // Consume the primed player once; a retry builds a fresh one (the
+      // page's audio context is already unlocked by the first prime).
+      final player = _primedPlayer;
+      _primedPlayer = null;
       return ref.read(liveSessionBuilderProvider)(
         requestId: requestId,
         scenarioId: widget.scenarioId,
         simType: widget.simType,
+        ttsPlayer: player,
       );
     }
     return ScriptedSimSession(widget.script);
@@ -93,6 +138,7 @@ class _SimHostState extends ConsumerState<SimHost> {
         _routedAway = true;
         ScoreRoute(sessionId: _controller.result!.sessionId).go(context);
       default:
+        // aborted and startFailed stay put and show their own screen.
         break;
     }
   }
@@ -129,6 +175,12 @@ class _SimHostState extends ConsumerState<SimHost> {
           AnalyticsProps.simType: widget.simType.schemaValue,
           AnalyticsProps.reason: 'start_failed',
         });
+      case SimPhase.aborted:
+        analytics.capture(AnalyticsEvents.simAborted, properties: {
+          AnalyticsProps.scenarioId: widget.scenarioId,
+          AnalyticsProps.simType: widget.simType.schemaValue,
+          AnalyticsProps.reason: _controller.abortReason ?? 'unknown',
+        });
       case SimPhase.requesting:
       case SimPhase.ending:
         break;
@@ -149,11 +201,23 @@ class _SimHostState extends ConsumerState<SimHost> {
   void dispose() {
     _controller.removeListener(_onControllerChanged);
     _controller.dispose();
+    // The primed player is disposed by the session that consumes it; if
+    // the attempt never got that far (cap, back-out), dispose it here.
+    unawaited(_primedPlayer?.dispose() ?? Future<void>.value());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Live path: run the device check before anything touches the gate.
+    if (_isLive && !_started) {
+      return SimPreflight(
+        script: widget.script,
+        onStart: _handleStart,
+        onBack: () => const SimulationsRoute().go(context),
+      );
+    }
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) => switch (_controller.phase) {
@@ -168,10 +232,33 @@ class _SimHostState extends ConsumerState<SimHost> {
             onRetry: _controller.retryStart,
             onBack: () => const SimulationsRoute().go(context),
           ),
+        SimPhase.aborted => SimAborted(
+            refundConfirmed: _controller.refundConfirmed,
+            onRetry: _controller.retryStart,
+            onBack: () => const SimulationsRoute().go(context),
+          ),
         // capBlocked and ended route away on the next frame; keep the
         // last live frame underneath rather than flashing blank.
-        _ => widget.builder(context, _controller, _confirmEnd),
+        _ => _liveView(context),
       },
+    );
+  }
+
+  /// The live layout, with the reconnecting banner floated over it while
+  /// the link is down (the clock is paused underneath).
+  Widget _liveView(BuildContext context) {
+    final live = widget.builder(context, _controller, _confirmEnd);
+    if (!_controller.reconnecting) return live;
+    return Stack(
+      children: [
+        live,
+        const Positioned(
+          top: 64,
+          left: 0,
+          right: 0,
+          child: Center(child: ReconnectingBanner()),
+        ),
+      ],
     );
   }
 }
