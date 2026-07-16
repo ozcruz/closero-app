@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/application/auth_providers.dart';
+import '../../features/auth/domain/user_doc.dart';
 import '../widgets/widgets.dart';
 import 'app_routes.dart';
 
 /// The signed-in app frame: sidebar plus screen content, inside the one
-/// grain-bearing scaffold. Nav structure matches the dashboard
+/// shared scaffold. Nav structure matches the dashboard
 /// prototype: Training (Dashboard, Simulations, My Progress), Library
 /// (Methodologies, Achievements), Settings pinned at the foot.
 class AppShell extends ConsumerWidget {
@@ -38,7 +39,7 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userDoc = ref.watch(userDocProvider).value;
     final authUser = ref.watch(authStateProvider).value;
-    final entitlement = ref.watch(entitlementProvider);
+    final phase = ref.watch(planPhaseProvider);
 
     final email = userDoc?.email ?? authUser?.email;
     final name = userDoc?.displayName ??
@@ -53,7 +54,7 @@ class AppShell extends ConsumerWidget {
             collapsed: SideNav.shouldCollapse(context),
             user: SideNavUser(
               name: name,
-              plan: '${entitlement.label} plan',
+              plan: phase == PlanPhase.trial ? phase.label : '${phase.label} plan',
               onTap: () => const SettingsRoute().go(context),
             ),
             groups: [

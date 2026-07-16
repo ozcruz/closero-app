@@ -152,7 +152,7 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
 
     final userDoc = ref.watch(userDocProvider).value;
     final authUser = ref.watch(authStateProvider).value;
-    final entitlement = ref.watch(entitlementProvider);
+    final phase = ref.watch(planPhaseProvider);
 
     final email = userDoc?.email ?? authUser?.email;
     final name = _currentName(ref);
@@ -172,7 +172,7 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
         .join();
     final joined = joinedLabel(authUser?.metadata.creationTime);
     final planLine = [
-      '${entitlement.label} plan',
+      phase == PlanPhase.trial ? phase.label : '${phase.label} plan',
       ?joined,
     ].join(' · ');
 
@@ -385,7 +385,8 @@ class _PlanBillingCardState extends ConsumerState<_PlanBillingCard> {
     final uid = ref.read(authStateProvider).value?.uid;
     if (uid == null) return;
     if (!billing.manageBillingConfigured) {
-      // True today: RevenueCat's receipt emails carry the portal link.
+      // Builds with no billing backend: RevenueCat's receipt emails
+      // carry the portal link.
       setState(() {
         _notice = 'Manage your subscription from the link in the '
             'receipt email RevenueCat sent you.';
@@ -395,8 +396,10 @@ class _PlanBillingCardState extends ConsumerState<_PlanBillingCard> {
     final opened = await billing.openManageBilling(uid: uid);
     if (!opened && mounted) {
       setState(() {
-        _notice = 'The billing portal could not open. Allow popups for '
-            'this site and try again.';
+        // Covers every failure honestly: no portal URL, backend
+        // unreachable, or the new tab blocked by the browser.
+        _notice = 'The billing portal could not open. Try again, or use '
+            'the manage link in the receipt email RevenueCat sent you.';
       });
     }
   }
@@ -404,9 +407,11 @@ class _PlanBillingCardState extends ConsumerState<_PlanBillingCard> {
   @override
   Widget build(BuildContext context) {
     final sp = context.sp;
-    final entitlement = ref.watch(entitlementProvider);
+    final phase = ref.watch(planPhaseProvider);
     final userDoc = ref.watch(userDocProvider).value;
-    final onCloser = entitlement == Entitlement.closer;
+    // Manage billing keys off the PAID state; a trialing user has no
+    // subscription to manage yet.
+    final onCloser = phase == PlanPhase.closer;
 
     return ClosCard(
       child: Column(
@@ -416,23 +421,32 @@ class _PlanBillingCardState extends ConsumerState<_PlanBillingCard> {
           SizedBox(height: sp.sp2),
           Row(
             children: [
-              ClosBadge(label: entitlement.label),
+              ClosBadge(label: phase.label),
               SizedBox(width: sp.sp3),
               Expanded(
-                child: onCloser
-                    ? const _PlanLine(
-                        title: 'Unlimited sessions',
-                        subtitle: '$kCloserMonthlyPrice/mo or '
-                            '$kCloserAnnualPrice/yr. Payments run through '
-                            'RevenueCat and Stripe.',
-                      )
-                    : _PlanLine(
-                        title:
-                            '${userDoc?.sessionsUsed ?? 0} of $kFreeSessionCap '
-                            'free sessions used this month',
-                        subtitle: 'Closer removes the cap and unlocks the '
-                            'full library.',
-                      ),
+                child: switch (phase) {
+                  PlanPhase.closer => const _PlanLine(
+                      title: 'Unlimited sessions (fair use: '
+                          '$kCloserFairUseCap per month)',
+                      subtitle: '$kCloserMonthlyPrice/mo or '
+                          '$kCloserAnnualPrice/yr. Payments run through '
+                          'RevenueCat and Stripe.',
+                    ),
+                  PlanPhase.trial => const _PlanLine(
+                      title: 'Full access, $kTrialDailyCap sessions '
+                          'per day',
+                      subtitle: 'Everything is unlocked while your trial '
+                          'lasts. Closer keeps it that way.',
+                    ),
+                  PlanPhase.free => _PlanLine(
+                      title:
+                          '${userDoc?.sessionsUsed ?? 0} of $kFreeSessionCap '
+                          'free sessions used this month',
+                      subtitle: 'Closer raises the cap to '
+                          '$kCloserFairUseCap sessions a month and '
+                          'unlocks the full library.',
+                    ),
+                },
               ),
               SizedBox(width: sp.sp4),
               if (onCloser)

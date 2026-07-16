@@ -11,50 +11,17 @@ Prereq: commit Session 16 first, so each session starts from a clean diff.
 
 ---
 
-## 17a — Release audit (READ-ONLY, ultracode + max)
+## 17a — Release audit: DONE (2026-07-14/15)
 
-> Release audit, read-only: do not edit a single file. First run the mechanical gate and
-> report pass/fail only: `flutter analyze`, `flutter test`, `dart run tool/gen_tokens.dart --check`,
-> `bash tool/ci_greps.sh`. Then audit all 22 screens registered in `lib/core/routing/app_router.dart`
-> (9 in-shell, 12 standalone, plus `NotFoundScreen`) against the CLAUDE.md hard rules, fanning
-> out per screen-cluster per dimension: (1) accent discipline: count accent-filled elements per
-> view, must be <=1 and on the permitted list; (2) container + state-color rules (no tinted-chip
-> washes, no red-tinted destructive, rings/bars by threshold never accent, scoreText ramp);
-> (3) copy voice: no em dashes, sentence case, no combat metaphors, low-pressure, and every
-> promise mechanically true (trace each claim to the code that makes it true, e.g. any "we email
-> you" or "this didn't count against your sessions" line); (4) tokens: no hardcoded
-> color/size/radius/font outside `tokens.g.dart`, spacing on the 4px scale, the 18px+bold type
-> rule; (5) icon signature (one -60deg element, 15x15 viewBox); (6) backend contract: the client
-> never writes `entitlement`/`sessionsUsed`/`usageMonth`, scores are server-written, analytics
-> payloads carry no email/displayName/transcript content; (7) accessibility: Semantics on every
-> icon-only control, 44px minimum targets, body contrast.
-> Reuse the existing reviewers in `.claude/agents/` (accent-auditor, copy-voice, token-cop) as
-> the per-dimension lenses. Adversarially verify every finding against the code before reporting
-> it: default to dropping anything you cannot prove with a file:line. Output ONE ranked list:
-> severity, file:line, rule broken, suggested fix. Separate "must fix before launch" from
-> "v1.1". Fix nothing.
+Ran read-only, ultracode. Output lives distilled in `context/open-findings.md`;
+the full report is `context/archive/session-17a-audit.md`.
 
-Pass condition: a findings list AND an unchanged working tree (`git status` clean). A dirty
-tree means it broke the read-only rule.
+## 17b — Fix pass: DONE (Session 17b, 2026-07-16)
 
-Why read-only + ultracode: 22 screens x 7 dimensions is broad, unknown-size discovery, which is
-the one place fan-out earns its cost. The adversarial-verify pass is what keeps the list
-trustworthy. Note the mechanical half is only 4 commands and was green at the end of Session 16;
-the value here is the judgment dimensions, not re-running greps.
-
-## 17b — Fix pass (CONDITIONAL: write it only after reading 17a's list)
-
-Do not pre-write this. Its size is unknowable until 17a reports, and Session 16 shut clean, so
-the list may be short. Shape:
-
-> Apply these findings from the release audit, most severe first: [paste the must-fix list].
-> One file at a time, smallest correct change; do not refactor beyond the finding. After each:
-> `flutter analyze`, `flutter test`, `bash tool/ci_greps.sh`. Regenerate any golden a change
-> touches (`flutter test --update-goldens`) and eyeball the PNG before accepting it. Anything
-> you decide NOT to fix, say why and label it v1.1.
-
-If the must-fix list is a handful of one-liners, fold this into the top of 17c instead of
-spending a session on it.
+Went a different way than "paste the list": adopted the reverse-trial model
+(trialEndsAt + derived tier), rewrote plan_catalog to the real three phases,
+wired getManageSubscriptionUrl. Closed must-fix 1-3. The remainder is in
+`context/open-findings.md`.
 
 ## 17c — Accessibility sweep, as permanent tests
 
@@ -147,10 +114,10 @@ That premise does not hold, so it was dropped:
   be "consistent" with, and a JS const on closero.app has no reach into a different origin.
 - It is also not urgent: `app.closero.app` is linked from zero pages and has no DNS record, so the
   app is private by default until the site links to it.
-- `context/promptSessionPreReqs.md:111` already places it in launch week ("Deploy behind
+- `context/archive/promptSessionPreReqs.md:111` already places it in launch week ("Deploy behind
   EARLY_ACCESS, invite the waitlist (Resend broadcast)"); the phrase originated in
-  `build-plan.md:10` as borrowed vocabulary standing in for "TestFlight". Session 17's own
-  documented hard blocks (`promptSessionPreReqs.md:101-103`) are only the Pages project and the
+  `context/archive/build-plan.md:10` as borrowed vocabulary standing in for "TestFlight". Session 17's own
+  documented hard blocks (`context/archive/promptSessionPreReqs.md:101-103`) are only the Pages project and the
   Firebase authorized domains.
 
 The real decision, for launch week: (a) do nothing, rely on the unlisted URL; (b) Cloudflare

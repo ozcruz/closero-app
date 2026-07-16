@@ -88,7 +88,7 @@ void main() {
         (tester) async {
       await pump(tester, const SettingsScreen());
       expect(
-        find.text('3 of 5 free sessions used this month'),
+        find.text('3 of 3 free sessions used this month'),
         findsOneWidget,
       );
       await tester.tap(find.text('Upgrade to Closer'));

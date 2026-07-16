@@ -26,7 +26,8 @@ class MethodologiesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.closColors;
     final sp = context.sp;
-    final locked = ref.watch(entitlementProvider) == Entitlement.free;
+    // Effective tier, not raw entitlement: trialing users are unlocked.
+    final locked = ref.watch(effectiveTierProvider) == Entitlement.free;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

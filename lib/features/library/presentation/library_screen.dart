@@ -99,9 +99,10 @@ class _LibraryBody extends ConsumerWidget {
   final ScenarioTrack track;
   final ValueChanged<ScenarioTrack> onTrackChanged;
 
-  /// Free tier = B2C library; every B2B card renders locked.
-  bool _locked(Entitlement entitlement) =>
-      track == ScenarioTrack.b2b && entitlement == Entitlement.free;
+  /// Effective free tier = B2C library; every B2B card renders locked.
+  /// Trialing users get the full library (reverse-trial model).
+  bool _locked(Entitlement tier) =>
+      track == ScenarioTrack.b2b && tier == Entitlement.free;
 
   String get _caption => switch (track) {
         ScenarioTrack.b2c =>
@@ -114,7 +115,7 @@ class _LibraryBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.closColors;
     final sp = context.sp;
-    final locked = _locked(ref.watch(entitlementProvider));
+    final locked = _locked(ref.watch(effectiveTierProvider));
 
     final visible = scenarios.where((s) => s.track == track);
     final pickUp =

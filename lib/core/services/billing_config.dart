@@ -18,12 +18,6 @@ const String kRcPurchaseLinkBase = String.fromEnvironment(
   defaultValue: 'https://pay.rev.cat/udnnzqorhqrkqlor',
 );
 
-/// Hosted subscription-management URL, if one is configured. RevenueCat
-/// Web Billing has no deterministic per-user portal URL (the portal link
-/// arrives in RevenueCat's receipt emails), so this stays empty until a
-/// hosted portal exists; the UI falls back to honest copy about the
-/// receipt email.
-///
-/// Override with: --dart-define=RC_MANAGE_BILLING_URL=https://...
-const String kRcManageBillingUrl =
-    String.fromEnvironment('RC_MANAGE_BILLING_URL');
+// Subscription management deliberately has no static URL here: the
+// portal link is per-user and authenticated, fetched at click time via
+// the getManageSubscriptionUrl callable (see billing_service.dart).

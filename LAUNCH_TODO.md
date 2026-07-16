@@ -13,6 +13,45 @@ Session 14+ prompts. Grouped by when it actually bites. Last reviewed 2026-07-13
 
 ## Before real (paying) users — the launch gate
 
+- [ ] **Attorney pass on ToS/Privacy.** Auto-renew disclosures, methodology trademark
+      names (SPIN, Sandler), earnings-claim framing, PostHog in the vendor list. The only
+      launch blocker no prompt clears; book it early, it has lead time. (was
+      promptSessionPreReqs item 12, merged here 2026-07-16)
+
+- [ ] **Fix the remaining honesty findings.** The live list is `context/open-findings.md`
+      (must-fix 4-11 distilled from the 17a audit; cosmetics deferred to the UI overhaul).
+
+- [ ] **Deploy the reverse-trial backend (Session 17b).** The client now derives
+      trial/free/closer from `users/{uid}.trialEndsAt` and the Settings "Manage billing"
+      button calls `getManageSubscriptionUrl`. None of that is live until, in
+      closero-backend: (1) `firebase deploy --only functions` (ships `onAuthUserCreated`,
+      the startSimSession backfill + per-phase caps, `getManageSubscriptionUrl`);
+      (2) `firebase functions:secrets:set RC_API_V2_KEY` (RevenueCat API v2 secret key)
+      and set the `RC_PROJECT_ID` param; (3) `firebase deploy --only firestore:rules`
+      (the rules that lock `trialEndsAt`/`usageDay` against client writes). Until the
+      deploy, existing users read as free phase (safe: nothing over-unlocks) and Manage
+      billing falls back to the receipt-email copy. Verify with one live click of
+      Manage billing on a paid test account. (Session 17b)
+
+- [ ] **UI overhaul: colors, typography, icons.** Decided 2026-07-16. The current look is
+      not shipping; the whole visual layer gets redone once the functionality is right.
+      Sequencing matters: do this AFTER the reverse-trial work (17b) and the functional
+      audit fixes, and BEFORE the a11y sweep (contrast and tap targets are only worth
+      pinning once against the final design, not twice).
+      What this moots, so nobody fixes it twice: ~40 of the 60 findings in
+      `context/archive/session-17a-audit.md` are cosmetic (the accent block, the token block, all
+      16 nits, and must-fix 12's dim1 contrast). Do not action them before the overhaul.
+      What it must resolve, because it is a live contradiction: **the icon-signature rule
+      in CLAUDE.md is suspended and wrong.** It demands "exactly ONE -60 degree element"
+      per icon, but the wordmark cuts a strip through the ring's centre (two PARALLEL
+      gaps), and the signature was only ever meant for the simulation icon. Today
+      `_drawGapRing` puts a single ~55 degree gap on five icons (Simulations,
+      Achievements, Settings, Mic, Power). Rewrite the rule from the real mark, then
+      re-cut the icons to it. Until that lands, icons are out of scope for every session.
+      Also unresolved and cheap to fold in: `clos_icons.dart:9-11` states the signature
+      more narrowly than CLAUDE.md does, which is how the two drifted apart in the first
+      place. Make one of them the source of truth. (Session 17a)
+
 - [~] **Firebase Auth authorized domains.** (Verified in console 2026-07-13.)
       DONE: `app.closero.app` is authorized (production domain covered). `localhost` works.
       STILL OPEN: the app's OWN `*.pages.dev` preview domain is NOT authorized. The
@@ -149,6 +188,12 @@ user takes a live call.
       personas for `cold-call-skeptical-homeowner`, `cold-call-saas-gatekeeper`,
       `discovery-roi-first-marcus` -- all real app scenario IDs; the latter two are the docs'
       example `LIVE_SCENARIOS`. Session 14 hard block #2 resolved. (Session 14)
+
+- [x] **The free cap actually BLOCKS, it does not merely count** (live test 2026-07-16:
+      5/5 sessions, then the paywall). This was the pricing doc's own #1 risk ("startSimSession
+      must BLOCK at every cap, not just count, or the whole cost model leaks") and CLAUDE.md's
+      "even while it only increments" is now stale. The cost model holds, and the reverse-trial
+      phases extend a gate that provably works rather than building one. (Session 17a)
 
 ## Known honest-copy debt (backend, not urgent)
 

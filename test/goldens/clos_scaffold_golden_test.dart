@@ -14,36 +14,11 @@ void main() {
     builder: () => GoldenTestGroup(
       children: [
         GoldenTestScenario(
-          name: 'grain shell with type scale sample',
+          name: 'shell with type scale sample',
           child: const SizedBox(
             width: 480,
             height: 360,
             child: ClosScaffold(body: _TypeSample()),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  goldenTest(
-    'GrainOverlay',
-    fileName: 'grain_overlay',
-    builder: () => GoldenTestGroup(
-      children: [
-        GoldenTestScenario(
-          name: 'noise tile at full opacity over base',
-          child: SizedBox(
-            width: 240,
-            height: 160,
-            child: ColoredBox(
-              color: ClosColors.bone.base,
-              child: GrainOverlay(
-                color: ClosColors.bone.hi1,
-                // Full opacity so the golden actually shows the pattern; the
-                // shell always uses the 2.5% default.
-                opacity: 1,
-              ),
-            ),
           ),
         ),
       ],

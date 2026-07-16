@@ -8,7 +8,13 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-SITE_TOKENS="${CLOSERO_SITE_TOKENS:-$HOME/Desktop/Closero/All Work July 2026/Current Work/closero-site/design-tokens.json}"
+# Prefer a sibling checkout (closero-app lives next to closero-site);
+# fall back to the known absolute location, then CLOSERO_SITE_TOKENS.
+DEFAULT_SITE_TOKENS="$HOME/Desktop/Closero/All Work July 2026/Current Work/closero-site/design-tokens.json"
+if [ -z "${CLOSERO_SITE_TOKENS:-}" ] && [ -f "../closero-site/design-tokens.json" ]; then
+  DEFAULT_SITE_TOKENS="../closero-site/design-tokens.json"
+fi
+SITE_TOKENS="${CLOSERO_SITE_TOKENS:-$DEFAULT_SITE_TOKENS}"
 APP_TOKENS="context/design-tokens.json"
 
 if [ ! -f "$SITE_TOKENS" ]; then

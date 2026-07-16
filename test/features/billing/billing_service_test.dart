@@ -27,9 +27,11 @@ void main() {
     test('unconfigured build reports itself and never launches', () async {
       final launched = <Uri>[];
       final service = WebBillingService(
-        // Explicit empty base: the real default now bakes in the live link,
-        // so the unconfigured case has to be constructed on purpose.
+        // Explicit empty base / null fetcher: the real defaults bake in
+        // the live link and the callable, so the unconfigured case has
+        // to be constructed on purpose.
         purchaseLinkBase: '',
+        fetchManageUrl: null,
         openUrl: (uri) async {
           launched.add(uri);
           return true;
@@ -40,6 +42,43 @@ void main() {
       expect(await service.openCheckout(uid: 'uid-1'), isFalse);
       expect(await service.openManageBilling(uid: 'uid-1'), isFalse);
       expect(launched, isEmpty);
+    });
+
+    test('manage billing opens the fetched portal URL', () async {
+      final launched = <Uri>[];
+      final service = WebBillingService(
+        fetchManageUrl: () async => 'https://pay.rev.cat/portal/abc',
+        openUrl: (uri) async {
+          launched.add(uri);
+          return true;
+        },
+      );
+      expect(service.manageBillingConfigured, isTrue);
+      expect(await service.openManageBilling(uid: 'uid-1'), isTrue);
+      expect(launched.single.toString(), 'https://pay.rev.cat/portal/abc');
+    });
+
+    test('manage billing reports false when there is no portal URL',
+        () async {
+      final launched = <Uri>[];
+      final service = WebBillingService(
+        fetchManageUrl: () async => null,
+        openUrl: (uri) async {
+          launched.add(uri);
+          return true;
+        },
+      );
+      expect(await service.openManageBilling(uid: 'uid-1'), isFalse);
+      expect(launched, isEmpty);
+    });
+
+    test('manage billing swallows fetcher errors as false, never throws',
+        () async {
+      final service = WebBillingService(
+        fetchManageUrl: () async => throw Exception('backend down'),
+        openUrl: (uri) async => true,
+      );
+      expect(await service.openManageBilling(uid: 'uid-1'), isFalse);
     });
 
     test('configured checkout opens the exact URL', () async {

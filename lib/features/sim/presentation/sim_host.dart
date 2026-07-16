@@ -155,7 +155,9 @@ class _SimHostState extends ConsumerState<SimHost> {
         analytics.capture(AnalyticsEvents.simStart, properties: {
           AnalyticsProps.scenarioId: widget.scenarioId,
           AnalyticsProps.simType: widget.simType.schemaValue,
-          AnalyticsProps.tier: ref.read(entitlementProvider).name,
+          // Reverse-trial phase (trial|free|closer), not the raw paid
+          // entitlement: a trialing user practicing is not a free user.
+          AnalyticsProps.tier: ref.read(planPhaseProvider).name,
         });
       case SimPhase.capBlocked:
         analytics.capture(AnalyticsEvents.capHit, properties: {

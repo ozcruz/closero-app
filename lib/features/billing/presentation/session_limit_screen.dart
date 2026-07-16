@@ -37,11 +37,13 @@ String freeCapResetLabel(DateTime now) {
 }
 
 /// The cap wall (context/prototype-screens/17-session-limit.png), shown
-/// when startSimSession reports the free cap is spent. Display only:
-/// the server decides the cap, this screen never counts sessions.
+/// when startSimSession reports the cap for the current phase is spent:
+/// daily while trialing, monthly on free. Display only: the server
+/// decides the cap, this screen never counts sessions; it derives the
+/// phase the same way the server does (trialEndsAt vs now).
 ///
 /// Accent audit: the Upgrade CTA is the view's one accent element. The
-/// five used-session dots are grayscale (they are not momentum dots).
+/// used-session dots are grayscale (they are not momentum dots).
 class SessionLimitScreen extends ConsumerWidget {
   const SessionLimitScreen({super.key});
 
@@ -59,6 +61,9 @@ class SessionLimitScreen extends ConsumerWidget {
       }
     });
 
+    final trialing = ref.watch(planPhaseProvider) == PlanPhase.trial;
+    final cap = trialing ? kTrialDailyCap : kFreeSessionCap;
+    final capNoun = trialing ? 'trial' : 'free';
     final resetLabel = freeCapResetLabel(ref.watch(clockProvider)());
 
     return BillingShell(
@@ -83,12 +88,12 @@ class SessionLimitScreen extends ConsumerWidget {
           ),
           SizedBox(height: sp.sp6),
           Semantics(
-            label: 'All $kFreeSessionCap free sessions used',
+            label: 'All $cap $capNoun sessions used',
             child: ExcludeSemantics(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  for (var i = 0; i < kFreeSessionCap; i++)
+                  for (var i = 0; i < cap; i++)
                     Padding(
                       padding: EdgeInsets.only(left: i == 0 ? 0 : 6),
                       child: Container(
@@ -106,33 +111,44 @@ class SessionLimitScreen extends ConsumerWidget {
           ),
           SizedBox(height: sp.sp5),
           Text(
-            "You've used all $kFreeSessionCap free sessions this month",
+            trialing
+                ? "You've used today's $cap trial sessions"
+                : "You've used all $cap free sessions this month",
             textAlign: TextAlign.center,
             style: type.headlineLarge,
           ),
           SizedBox(height: sp.headlineToSubtext),
-          Text.rich(
-            textAlign: TextAlign.center,
-            TextSpan(
-              text: 'Your free sessions reset on ',
+          if (trialing)
+            Text(
+              'More trial sessions unlock tomorrow. Upgrade to Closer '
+              'to remove the daily cap, and to keep the full library '
+              'after your trial ends.',
+              textAlign: TextAlign.center,
               style: type.bodyMedium.copyWith(height: 1.6),
-              children: [
-                TextSpan(
-                  text: resetLabel,
-                  style: ClosType.style(
-                    fontSize: 14,
-                    weight: FontWeight.w600,
-                    color: colors.hi2,
+            )
+          else
+            Text.rich(
+              textAlign: TextAlign.center,
+              TextSpan(
+                text: 'Your free sessions reset on ',
+                style: type.bodyMedium.copyWith(height: 1.6),
+                children: [
+                  TextSpan(
+                    text: resetLabel,
+                    style: ClosType.style(
+                      fontSize: 14,
+                      weight: FontWeight.w600,
+                      color: colors.hi2,
+                    ),
                   ),
-                ),
-                const TextSpan(
-                  text: '. Upgrade to Closer for unlimited practice, '
-                      'plus the full B2B library, methodologies, and '
-                      'live coaching on every call.',
-                ),
-              ],
+                  const TextSpan(
+                    text: '. Upgrade to Closer to raise it to '
+                        '$kCloserFairUseCap sessions a month, plus '
+                        'the full B2B library and methodologies.',
+                  ),
+                ],
+              ),
             ),
-          ),
           SizedBox(height: sp.sp8),
           PrimaryButton(
             label: 'Upgrade to Closer',

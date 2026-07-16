@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
-import 'grain_overlay.dart';
 
-/// The app shell scaffold: base background plus the grain overlay on top of
-/// screen content. Every screen renders inside one of these; screens never
-/// apply their own grain.
+/// The app shell scaffold: base background behind screen content. Every
+/// screen renders inside one of these. The grain overlay that used to
+/// sit on top was removed 2026-07-16 (visual + latency cost); any
+/// texture decision belongs to the UI overhaul, not individual screens.
 class ClosScaffold extends StatelessWidget {
   const ClosScaffold({super.key, this.body});
 
@@ -16,13 +16,7 @@ class ClosScaffold extends StatelessWidget {
     final colors = context.closColors;
     return Scaffold(
       backgroundColor: colors.base,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          ?body,
-          Positioned.fill(child: GrainOverlay(color: colors.hi1)),
-        ],
-      ),
+      body: body == null ? null : SizedBox.expand(child: body),
     );
   }
 }

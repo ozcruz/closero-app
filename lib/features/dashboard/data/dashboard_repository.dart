@@ -4,6 +4,10 @@ import '../../../core/widgets/widgets.dart';
 import '../../onboarding/data/onboarding_store.dart';
 import '../domain/dashboard_data.dart';
 
+// clockProvider moved to core (the trial window needs it too); the
+// re-export keeps this file the import site its consumers know.
+export '../../../core/services/clock.dart' show clockProvider;
+
 /// Read side of the dashboard. Fixture-backed today; the Firestore
 /// implementation swaps in behind this same interface (session scores,
 /// skills, and streaks are all server-written, so the client only ever
@@ -132,7 +136,3 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>(
 final dashboardDataProvider = FutureProvider<DashboardData>(
   (ref) => ref.watch(dashboardRepositoryProvider).load(),
 );
-
-/// The clock behind the topbar greeting, overridable in tests so
-/// goldens are deterministic.
-final clockProvider = Provider<DateTime Function()>((ref) => DateTime.now);

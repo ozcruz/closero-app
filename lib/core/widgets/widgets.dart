@@ -17,7 +17,6 @@ export 'closero_wordmark.dart';
 export 'data_load_error.dart';
 export 'delta_pill.dart';
 export 'empty_state.dart';
-export 'grain_overlay.dart';
 export 'hint_card.dart';
 export 'income_track.dart';
 export 'inline_notice.dart';

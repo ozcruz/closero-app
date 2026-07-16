@@ -97,8 +97,8 @@ class _UpgradeScreenState extends ConsumerState<UpgradeScreen> {
     // Keep the auth stream live so _startCheckout's read sees the
     // signed-in uid (providers are lazy; nothing else here watches it).
     ref.watch(authStateProvider);
-    final entitlement = ref.watch(entitlementProvider);
-    final onCloser = entitlement == Entitlement.closer;
+    final phase = ref.watch(planPhaseProvider);
+    final onCloser = phase == PlanPhase.closer;
     final checkoutConfigured =
         ref.watch(billingServiceProvider).checkoutConfigured;
 
@@ -119,9 +119,9 @@ class _UpgradeScreenState extends ConsumerState<UpgradeScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 620),
               child: Text(
-                'Free gets you started. Closer removes the cap and '
-                'unlocks the full library: every methodology, every '
-                'scenario, every session logged.',
+                'Free keeps you practicing. Closer raises the cap to '
+                '$kCloserFairUseCap sessions a month and unlocks the '
+                'full library: every methodology, every scenario.',
                 textAlign: TextAlign.center,
                 style: type.bodyLarge.copyWith(height: 1.55),
               ),
@@ -133,7 +133,7 @@ class _UpgradeScreenState extends ConsumerState<UpgradeScreen> {
               final stacked = constraints.maxWidth < 760;
               final free = _PlanCard(
                 stretch: !stacked,
-                badge: onCloser ? null : 'Current plan',
+                badge: phase == PlanPhase.free ? 'Current plan' : null,
                 name: 'Free',
                 price: r'$0',
                 priceNote: 'Enough to get a real feel for the product.',
@@ -187,6 +187,13 @@ class _UpgradeScreenState extends ConsumerState<UpgradeScreen> {
               );
             },
           ),
+          if (phase == PlanPhase.trial) ...[
+            SizedBox(height: sp.sp4),
+            const InlineNotice(
+              kind: InlineNoticeKind.info,
+              message: kTrialPhaseNote,
+            ),
+          ],
           if (!checkoutConfigured && !onCloser) ...[
             SizedBox(height: sp.sp4),
             const InlineNotice(

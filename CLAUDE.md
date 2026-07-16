@@ -1,12 +1,12 @@
- CLAUDE.md: closero-app
+# CLAUDE.md: closero-app
 
-> Copy this file to the ROOT of the new `closero-app/` repo as `CLAUDE.md`. Every Claude Code session reads it automatically. It is the condensed law; the full spec lives in Notion ("Closero Design System & Screen Notes" + "Development Notes") and `context/`.
+> The condensed law for this repo. Fuller specs live in `context/` (binding: scoring-rubric.md, rive-contract.md, design-tokens.json, canonical-mock-data.md) and Notion. `context/archive/` is history only; never treat it as current. Open work: LAUNCH_TODO.md and `context/open-findings.md`.
 
 ## What this is
 
 Closero: AI sales-training SaaS. Reps practice sales calls against AI personas, get live coaching + post-call scoring. This repo is the Flutter app. **v1 target is WEB** (deployed to Cloudflare Pages at app.closero.app); iOS is second, Android third. Same Firebase + RevenueCat backend as the live site (closero.app). Separate repo from the site; shared backend, never shared code.
 
-The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/All Work July 2026/Current Work. includes prototypes of the site and app, however closero-site is what is actually deployed live as my official site.
+Sibling repos (this repo lives, or is about to live, next to them in `.../Desktop/Closero/All Work July 2026/Current Work/`): `closero-site` (the live marketing site, source of truth for design tokens), `closero-backend` (Cloud Functions + firestore.rules), `closero-broker` (the live-call Worker). Other folders there are old prototypes; ignore them. `tool/sync_tokens.sh` finds the site as a sibling first, then by absolute path, then `CLOSERO_SITE_TOKENS`.
 
 ## Design token sync (single source of truth)
 
@@ -23,7 +23,7 @@ The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/All Work July 
 - Type rule enforced in the type scale: 18px+ AND bold = Bricolage Grotesque; everything else = Figtree. Never override per-widget.
 - Spacing only from the 4px scale (sp1..sp24). Headline→subtext = sp3 (12px), section→next section = sp6 (24px), always.
 - Radii: cards 5-6px, buttons 5px. Full rounding only on circles + progress end-caps.
-- Grain overlay (2.5% noise) is applied by the app shell. Do not add per-screen.
+- The grain overlay was REMOVED 2026-07-16 (looked bad, cost latency). Do not re-add noise anywhere; whether any texture returns is a UI-overhaul decision.
 
 ### Accent discipline
 - ONE accent-filled element per view, maximum. Permitted uses ONLY: primary CTA fill, live-call mic-on control, pricing recommended-tier highlight, app icon, income-track gradient (accentDim→accent).
@@ -55,9 +55,10 @@ The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/All Work July 
 - Video Sim: same coaching panel, full-screen stage, frosted topbar, blurred office bg, accent = none.
 
 ### Backend contracts
-- Same Firebase project as web. `users/{uid}`: email, displayName, entitlement 'free'|'closer', rcAppUserId=uid, usageMonth 'YYYY-MM', sessionsUsed, createdAt, updatedAt.
-- The client NEVER writes entitlement, sessionsUsed, or usageMonth. Reads only. Those flip via the RevenueCat webhook / Cloud Functions.
-- Every sim start goes through the `startSimSession` callable, from day one, even while it only increments. The client never decides the cap.
+- Same Firebase project as the site. `users/{uid}`: email, displayName, entitlement 'free'|'closer', rcAppUserId=uid, trialEndsAt, usageMonth 'YYYY-MM', sessionsUsed, usageDay 'YYYY-MM-DD', sessionsUsedDay, capEmailMonth, createdAt, updatedAt.
+- The client NEVER writes entitlement, trialEndsAt, sessionsUsed, usageMonth, usageDay, or sessionsUsedDay. Reads only. Those flip via the RevenueCat webhook / Cloud Functions, and firestore.rules enforce it.
+- Reverse trial (pricing doc 2026-07-11): `entitlement` stays the PAID state; access is the derived tier (closer if paid OR now < trialEndsAt) via `effectiveTierProvider` / `planPhaseProvider`. Gates read the derived tier; purchase-flip listeners and purchase analytics read raw entitlement. Plan facts (caps, prices) live only in `plan_catalog.dart` and must match `limits.js` in closero-backend.
+- Every sim start goes through the `startSimSession` callable, from day one. It BLOCKS at the per-phase cap (verified live 2026-07-16); the client never decides the cap.
 - Session scores are server-written. The client displays; it never computes-and-saves a score.
 - Billing on web: RevenueCat Web Purchase Links (URL carries app_user_id = Firebase uid) + Firestore entitlement watch. purchases_flutter arrives only with the iOS target, behind the existing BillingService interface.
 - Analytics: every product event goes through the single `AnalyticsService`; event names are consts in one file (`lib/core/services/analytics_events.dart`), never inline strings. Identify by Firebase uid only; no email, displayName, or transcript content in any event payload. `purchase_succeeded` fires from the entitlement flip in Firestore, never from the checkout click.
@@ -70,9 +71,9 @@ The Closero site repo path is /Users/osmansiddiqi/Desktop/Closero/All Work July 
 - Rive assets load via `RiveWidgetController` + `dataBind(DataBind.auto())`, holding the `AvatarVM.viseme` property and input handles. Never the plain `RiveAnimation.asset` widget. Missing file, state machine, view model, or handle = fall back to the placeholder, never crash.
 - The Azure-viseme-ID to mouth-group mapping lives ONLY in `lib/core/services/viseme_mapping.dart`. No inline viseme maps anywhere else.
 - Viseme input updates are scheduled against audio playback position (just_audio position stream, per utterance), NEVER against event-arrival time. Blink/breath/idle run on their own timers, decoupled from the viseme stream.
-- Library: free tier = B2C library, Closer = B2B + Methodologies. Locked cards route to the upgrade screen. Methodology tags appear ONLY in the Scenario Preview Modal, never on cards. Completion = personal-best score or "Start", never a checkmark.
+- Library: effective free tier = B2C only; trial and Closer get B2B + Methodologies (gates read `effectiveTierProvider`, never raw entitlement). Locked cards route to the upgrade screen. Methodology tags appear ONLY in the Scenario Preview Modal, never on cards. Completion = personal-best score or "Start", never a checkmark.
 - Accessibility is not optional: Semantics on every icon-only control, 44px minimum tap targets (enforced in the primitives), body copy contrast per token rules.
-- Icon signature: every custom icon has exactly ONE -60° element (gap or shear), 15x15 viewBox, 1.2-1.5 stroke, round caps, grayscale dim2→hi2 (streak flame excepted). Circles under r≈2.5 stay closed. Rings exempt (functional).
+- Icons are OUT OF SCOPE until the UI overhaul: do not add, redraw, or "fix" icon glyphs, and do not enforce or flag the old "-60° signature" rule (it was struck 2026-07-16; it never matched the mark's real geometry and will be rewritten with the overhaul). Still binding meanwhile: 15x15 viewBox, 1.2-1.5 stroke, round caps, grayscale dim2→hi2 (streak flame excepted), rings exempt (functional).
 - Wordmark/icon geometry is LOCKED. Recolor or add container chrome only; never redraw. Wordmark appears only in onboarding (hero 400px, topbar 60px). Icon (ring alone, accentDim, 18px) on no-sidebar screens. Sidebar has no logo.
 
 ## Secrets and API keys
@@ -97,6 +98,6 @@ Sandra Voss · 9-day streak · $64K current, $40K-$150K range, $85-95K next tier
 
 ## Session protocol
 
-One feature per session. Read `context/` before writing code. State which prototype screen(s) you are matching. Do not start the next feature in the same session. If a spec question is not answered by this file or `context/`, ask; do not invent.
+One feature per session. Read the relevant `context/` docs before writing code (skip `context/archive/`). State which prototype screen(s) you are matching. Do not start the next feature in the same session. If a spec question is not answered by this file or `context/`, ask; do not invent.
 
 When necessary, always use Context7 when I need library/API documentation, code generation, setup, or configuration steps without me having to explicitly ask.
